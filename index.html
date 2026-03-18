@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Список">
+  <title>Список покупок</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #242424;
+      --border: #2e2e2e;
+      --accent: #c8f135;
+      --accent-dim: rgba(200,241,53,0.12);
+      --text: #f0f0f0;
+      --text-dim: #666;
+      --done-color: #444;
+      --radius: 10px;
+      --font: 'Martian Mono', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      max-width: 540px;
+      margin: 0 auto;
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 12px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    h1 {
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+    }
+
+    #item-count {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 300;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .icon-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 7px 10px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      transition: all 0.15s;
+      font-family: var(--font);
+      white-space: nowrap;
+    }
+    .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .icon-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    #sync-btn { min-width: 80px; font-size: 11px; }
+    #sync-btn.syncing { animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* LIST */
+    #list-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    #list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: default;
+      transition: background 0.15s, border-color 0.15s, opacity 0.2s;
+      user-select: none;
+      touch-action: none;
+      position: relative;
+    }
+    .item:hover { border-color: #3a3a3a; }
+    .item.done { opacity: 0.45; }
+    .item.dragging {
+      opacity: 0.3;
+      border-color: var(--accent);
+    }
+    .item.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .drag-handle {
+      color: var(--text-dim);
+      cursor: grab;
+      font-size: 15px;
+      flex-shrink: 0;
+      padding: 2px 0;
+      line-height: 1;
+      touch-action: none;
+    }
+    .drag-handle:active { cursor: grabbing; }
+
+    .check {
+      width: 20px;
+      height: 20px;
+      border: 1.5px solid var(--border);
+      border-radius: 50%;
+      flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .item.done .check {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .check::after {
+      content: '';
+      width: 6px;
+      height: 10px;
+      border: 2px solid var(--bg);
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg) translateY(-1px);
+      display: none;
+    }
+    .item.done .check::after { display: block; }
+
+    .item-text {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 300;
+      line-height: 1.4;
+      word-break: break-word;
+      outline: none;
+      background: none;
+      border: none;
+      color: inherit;
+      font-family: var(--font);
+      cursor: text;
+      min-width: 0;
+    }
+    .item.done .item-text {
+      text-decoration: line-through;
+      color: var(--done-color);
+    }
+
+    .del-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 2px 4px;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .item:hover .del-btn { opacity: 1; }
+    .del-btn:hover { color: #ff5f5f; }
+
+    /* EMPTY STATE */
+    #empty {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 10px;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      text-align: center;
+    }
+    #empty .big { font-size: 36px; margin-bottom: 4px; }
+    #list:empty ~ #empty { display: flex; }
+
+    /* INPUT */
+    footer {
+      padding: 12px 16px 20px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    #new-item {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 300;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+    }
+    #new-item:focus { border-color: var(--accent); }
+    #new-item::placeholder { color: var(--text-dim); }
+
+    #add-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #0f0f0f;
+      font-family: var(--font);
+      font-size: 20px;
+      font-weight: 500;
+      width: 44px;
+      height: 44px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: opacity 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #add-btn:active { transform: scale(0.93); }
+
+    /* TOAST */
+    #toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 18px;
+      border-radius: 30px;
+      font-size: 12px;
+      font-weight: 300;
+      opacity: 0;
+      transition: all 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 100;
+      max-width: calc(100vw - 40px);
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* MODAL */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #modal-overlay.show { display: flex; }
+
+    #modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 24px;
+      max-width: 420px;
+      width: 100%;
+    }
+
+    #modal h2 {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 14px;
+      letter-spacing: 0.05em;
+    }
+
+    #modal p {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.7;
+      font-weight: 300;
+      margin-bottom: 10px;
+    }
+
+    #modal input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 10px 12px;
+      outline: none;
+      margin: 8px 0 16px;
+    }
+    #modal input:focus { border-color: var(--accent); }
+
+    .modal-btns {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .modal-btns button {
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    #modal-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    #modal-cancel:hover { border-color: var(--text-dim); color: var(--text); }
+    #modal-save {
+      background: var(--accent);
+      border: none;
+      color: #0f0f0f;
+      font-weight: 500;
+    }
+    #modal-save:hover { opacity: 0.85; }
+
+    /* Clear done */
+    #clear-done {
+      display: none;
+      font-size: 11px;
+      color: var(--text-dim);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font);
+      padding: 0;
+      transition: color 0.15s;
+    }
+    #clear-done.visible { display: inline; }
+    #clear-done:hover { color: #ff5f5f; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="header-left">
+      <h1>СПИСОК</h1>
+      <span id="item-count"></span>
+    </div>
+    <div class="header-actions">
+      <button id="clear-done" title="Удалить купленные">✕ купленные</button>
+      <button id="sync-btn" class="icon-btn" title="Синхронизация с Google Drive">⇅ Drive</button>
+      <button id="settings-btn" class="icon-btn" title="Настройки">⚙</button>
+    </div>
+  </header>
+
+  <div id="list-container">
+    <div id="list"></div>
+    <div id="empty">
+      <div class="big">🛒</div>
+      <div>список пуст</div>
+      <div>добавь первый товар</div>
+    </div>
+  </div>
+
+  <footer>
+    <div id="input-row">
+      <input id="new-item" type="text" placeholder="добавить товар..." autocomplete="off" autocorrect="off" spellcheck="false">
+      <button id="add-btn">+</button>
+    </div>
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<div id="modal-overlay">
+  <div id="modal">
+    <h2>GOOGLE DRIVE API</h2>
+    <p>Для синхронизации нужен OAuth Client ID.<br>Создаётся один раз бесплатно:</p>
+    <p>1. Открой <strong style="color:var(--text)">console.cloud.google.com</strong><br>
+       2. Создай проект → APIs & Services → Credentials<br>
+       3. Create Credentials → OAuth client ID → Web application<br>
+       4. В Authorized JavaScript origins добавь адрес этой страницы<br>
+       5. Скопируй Client ID и вставь ниже</p>
+    <input id="client-id-input" type="text" placeholder="вставь Client ID сюда...">
+    <div class="modal-btns">
+      <button id="modal-cancel">Отмена</button>
+      <button id="modal-save">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'shopping_list_v1';
+const CLIENT_ID_KEY = 'gdrive_client_id';
+const FILE_NAME = 'shopping-list.json';
+const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+
+let items = [];
+let tokenClient = null;
+let accessToken = null;
+let gdriveFileId = null;
+let saveTimer = null;
+let isDirty = false;
+
+// ─── LOAD LOCAL ───────────────────────────────────────────────────────────────
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) items = JSON.parse(raw);
+  } catch(e) { items = []; }
+}
+
+function saveLocal() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function render() {
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  items.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'item' + (item.done ? ' done' : '');
+    el.dataset.id = item.id;
+    el.draggable = true;
+
+    el.innerHTML = `
+      <div class="drag-handle" data-handle>⋮⋮</div>
+      <div class="check" data-check></div>
+      <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
+      <button class="del-btn" data-del title="Удалить">×</button>
+    `;
+
+    // Check toggle
+    el.querySelector('[data-check]').addEventListener('click', () => toggleDone(item.id));
+
+    // Delete
+    el.querySelector('[data-del]').addEventListener('click', () => deleteItem(item.id));
+
+    // Edit
+    const textEl = el.querySelector('.item-text');
+    textEl.addEventListener('blur', () => {
+      const newText = textEl.textContent.trim();
+      if (newText && newText !== item.text) {
+        item.text = newText;
+        scheduleSave();
+      } else if (!newText) {
+        deleteItem(item.id);
+      }
+    });
+    textEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); textEl.blur(); }
+    });
+
+    // Drag (desktop)
+    el.addEventListener('dragstart', onDragStart);
+    el.addEventListener('dragover', onDragOver);
+    el.addEventListener('dragend', onDragEnd);
+    el.addEventListener('drop', onDrop);
+
+    // Touch drag
+    const handle = el.querySelector('[data-handle]');
+    handle.addEventListener('touchstart', onTouchStart, { passive: false });
+
+    list.appendChild(el);
+  });
+
+  updateCount();
+  updateClearBtn();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateCount() {
+  const total = items.length;
+  const done = items.filter(i => i.done).length;
+  const el = document.getElementById('item-count');
+  el.textContent = total ? `${done}/${total}` : '';
+}
+
+function updateClearBtn() {
+  const btn = document.getElementById('clear-done');
+  const hasDone = items.some(i => i.done);
+  btn.classList.toggle('visible', hasDone);
+}
+
+// ─── ACTIONS ─────────────────────────────────────────────────────────────────
+function addItem(text) {
+  if (!text.trim()) return;
+  items.push({ id: Date.now().toString(), text: text.trim(), done: false });
+  scheduleSave();
+  render();
+}
+
+function toggleDone(id) {
+  const item = items.find(i => i.id === id);
+  if (item) { item.done = !item.done; scheduleSave(); render(); }
+}
+
+function deleteItem(id) {
+  items = items.filter(i => i.id !== id);
+  scheduleSave();
+  render();
+}
+
+function clearDone() {
+  items = items.filter(i => !i.done);
+  scheduleSave();
+  render();
+}
+
+function scheduleSave() {
+  saveLocal();
+  isDirty = true;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    if (isDirty && accessToken) syncToDrive();
+  }, 2000);
+}
+
+// ─── DRAG & DROP (desktop) ────────────────────────────────────────────────────
+let dragSrcId = null;
+
+function onDragStart(e) {
+  dragSrcId = e.currentTarget.dataset.id;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.item').forEach(el => el.classList.remove('drag-over'));
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  const targetId = e.currentTarget.dataset.id;
+  if (dragSrcId && targetId && dragSrcId !== targetId) {
+    const fromIdx = items.findIndex(i => i.id === dragSrcId);
+    const toIdx = items.findIndex(i => i.id === targetId);
+    const [moved] = items.splice(fromIdx, 1);
+    items.splice(toIdx, 0, moved);
+    scheduleSave();
+    render();
+  }
+}
+
+function onDragEnd(e) {
+  document.querySelectorAll('.item').forEach(el => {
+    el.classList.remove('dragging', 'drag-over');
+  });
+  dragSrcId = null;
+}
+
+// ─── TOUCH DRAG ───────────────────────────────────────────────────────────────
+let touchDragEl = null;
+let touchClone = null;
+let touchStartY = 0;
+let touchOffsetY = 0;
+
+function onTouchStart(e) {
+  e.preventDefault();
+  const handle = e.currentTarget;
+  touchDragEl = handle.closest('.item');
+  const rect = touchDragEl.getBoundingClientRect();
+  touchStartY = e.touches[0].clientY;
+  touchOffsetY = touchStartY - rect.top;
+
+  touchClone = touchDragEl.cloneNode(true);
+  touchClone.style.cssText = `
+    position: fixed;
+    left: ${rect.left}px;
+    top: ${rect.top}px;
+    width: ${rect.width}px;
+    z-index: 999;
+    opacity: 0.85;
+    pointer-events: none;
+    border-color: var(--accent);
+    background: var(--surface2);
+    transition: none;
+  `;
+  document.body.appendChild(touchClone);
+  touchDragEl.style.opacity = '0.2';
+
+  document.addEventListener('touchmove', onTouchMove, { passive: false });
+  document.addEventListener('touchend', onTouchEnd);
+}
+
+function onTouchMove(e) {
+  e.preventDefault();
+  const y = e.touches[0].clientY;
+  touchClone.style.top = (y - touchOffsetY) + 'px';
+
+  const els = document.elementsFromPoint(e.touches[0].clientX, y);
+  const target = els.find(el => el.classList.contains('item') && el !== touchDragEl);
+
+  document.querySelectorAll('.item').forEach(el => el.classList.remove('drag-over'));
+  if (target) target.classList.add('drag-over');
+}
+
+function onTouchEnd(e) {
+  document.removeEventListener('touchmove', onTouchMove);
+  document.removeEventListener('touchend', onTouchEnd);
+
+  const touch = e.changedTouches[0];
+  const els = document.elementsFromPoint(touch.clientX, touch.clientY);
+  const target = els.find(el => el.classList.contains('item') && el !== touchDragEl);
+
+  if (target && touchDragEl) {
+    const fromIdx = items.findIndex(i => i.id === touchDragEl.dataset.id);
+    const toIdx = items.findIndex(i => i.id === target.dataset.id);
+    if (fromIdx !== -1 && toIdx !== -1 && fromIdx !== toIdx) {
+      const [moved] = items.splice(fromIdx, 1);
+      items.splice(toIdx, 0, moved);
+      scheduleSave();
+    }
+  }
+
+  touchClone?.remove();
+  touchClone = null;
+  touchDragEl?.style.removeProperty('opacity');
+  touchDragEl = null;
+  document.querySelectorAll('.item').forEach(el => el.classList.remove('drag-over'));
+  render();
+}
+
+// ─── GOOGLE DRIVE ─────────────────────────────────────────────────────────────
+function getClientId() {
+  return localStorage.getItem(CLIENT_ID_KEY) || '';
+}
+
+function initGoogleAuth() {
+  const clientId = getClientId();
+  if (!clientId || !window.google?.accounts?.oauth2) return;
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { toast('Ошибка авторизации'); return; }
+      accessToken = resp.access_token;
+      updateSyncBtn('connected');
+      toast('Подключено к Google Drive');
+      await syncFromDrive();
+    }
+  });
+}
+
+function updateSyncBtn(state) {
+  const btn = document.getElementById('sync-btn');
+  btn.classList.remove('active', 'syncing');
+  if (state === 'connected') { btn.textContent = '✓ Drive'; btn.classList.add('active'); }
+  else if (state === 'syncing') { btn.textContent = '⇅ Drive'; btn.classList.add('syncing'); }
+  else { btn.textContent = '⇅ Drive'; }
+}
+
+async function handleSyncClick() {
+  const clientId = getClientId();
+  if (!clientId) { showModal(); return; }
+  if (!window.google?.accounts?.oauth2) { toast('Загрузка Google API...'); return; }
+  if (!tokenClient) initGoogleAuth();
+  if (!accessToken) {
+    tokenClient.requestAccessToken({ prompt: 'consent' });
+  } else {
+    updateSyncBtn('syncing');
+    await syncToDrive();
+    await syncFromDrive();
+  }
+}
+
+async function findOrCreateFile() {
+  // Search in appDataFolder
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D'${FILE_NAME}'&fields=files(id)`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  const data = await res.json();
+  if (data.files?.length) return data.files[0].id;
+
+  // Create
+  const meta = new Blob([JSON.stringify({ name: FILE_NAME, parents: ['appDataFolder'] })], { type: 'application/json' });
+  const content = new Blob([JSON.stringify([])], { type: 'application/json' });
+  const form = new FormData();
+  form.append('metadata', meta);
+  form.append('file', content);
+  const cr = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: form
+  });
+  const created = await cr.json();
+  return created.id;
+}
+
+async function syncToDrive() {
+  if (!accessToken) return;
+  updateSyncBtn('syncing');
+  try {
+    if (!gdriveFileId) gdriveFileId = await findOrCreateFile();
+    const body = JSON.stringify(items);
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${gdriveFileId}?uploadType=media`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body
+    });
+    isDirty = false;
+    updateSyncBtn('connected');
+    toast('Сохранено в Drive');
+  } catch(e) { toast('Ошибка сохранения'); updateSyncBtn('connected'); }
+}
+
+async function syncFromDrive() {
+  if (!accessToken) return;
+  updateSyncBtn('syncing');
+  try {
+    if (!gdriveFileId) gdriveFileId = await findOrCreateFile();
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${gdriveFileId}?alt=media`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const remote = await res.json();
+    if (Array.isArray(remote) && remote.length >= 0) {
+      items = remote;
+      saveLocal();
+      render();
+    }
+    updateSyncBtn('connected');
+    toast('Список загружен из Drive');
+  } catch(e) { toast('Ошибка загрузки'); updateSyncBtn('connected'); }
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function showModal() {
+  const overlay = document.getElementById('modal-overlay');
+  const input = document.getElementById('client-id-input');
+  input.value = getClientId();
+  overlay.classList.add('show');
+  setTimeout(() => input.focus(), 100);
+}
+
+document.getElementById('modal-cancel').addEventListener('click', () => {
+  document.getElementById('modal-overlay').classList.remove('show');
+});
+
+document.getElementById('modal-save').addEventListener('click', () => {
+  const val = document.getElementById('client-id-input').value.trim();
+  if (!val) { toast('Вставь Client ID'); return; }
+  localStorage.setItem(CLIENT_ID_KEY, val);
+  document.getElementById('modal-overlay').classList.remove('show');
+  tokenClient = null;
+  accessToken = null;
+  initGoogleAuth();
+  toast('Client ID сохранён');
+  setTimeout(() => tokenClient?.requestAccessToken({ prompt: 'consent' }), 300);
+});
+
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('show');
+});
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadLocal();
+render();
+
+document.getElementById('add-btn').addEventListener('click', () => {
+  const input = document.getElementById('new-item');
+  addItem(input.value);
+  input.value = '';
+  input.focus();
+});
+
+document.getElementById('new-item').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    addItem(e.target.value);
+    e.target.value = '';
+  }
+});
+
+document.getElementById('sync-btn').addEventListener('click', handleSyncClick);
+document.getElementById('settings-btn').addEventListener('click', showModal);
+document.getElementById('clear-done').addEventListener('click', clearDone);
+
+// Load Google Identity Services
+const gsiScript = document.createElement('script');
+gsiScript.src = 'https://accounts.google.com/gsi/client';
+gsiScript.onload = () => {
+  if (getClientId()) initGoogleAuth();
+};
+document.head.appendChild(gsiScript);
+</script>
+</body>
+</html>
