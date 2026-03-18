@@ -782,18 +782,21 @@
         const data = await res.json();
         const content = data.files?.[getFileName()]?.content;
         if (content) {
-          const remote = JSON.parse(content);
+          let remote;
+          try { remote = JSON.parse(content); } catch (e) { toast('Ошибка формата данных'); updateSyncBtn(''); return; }
           if (Array.isArray(remote)) {
+            const hadDirty = isDirty;
             items = mergeItems(items, remote);
             ensureOrder();
+            isDirty = false;
             saveLocal();
             render();
-            // Если после слияния есть локальные изменения — отправить обратно
-            if (isDirty) syncToGist();
+            // Если были локальные изменения — отправить слияние обратно
+            if (hadDirty) await syncToGist();
           }
         }
         updateSyncBtn('connected');
-      } catch (e) { toast('Ошибка: ' + e.message); updateSyncBtn(''); }
+      } catch (e) { toast('Ошибка сети'); updateSyncBtn(''); }
     }
 
     async function handleSyncClick() {
