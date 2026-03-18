@@ -710,7 +710,7 @@
       updateSyncBtn('syncing');
       try {
         const res = await fetch(`https://api.github.com/gists/${gistId}?t=${Date.now()}`, {
-          headers: { Authorization: `Bearer ${token}`, 'Cache-Control': 'no-cache' }
+          headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) {
           const err = await res.json();
