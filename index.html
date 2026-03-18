@@ -705,9 +705,9 @@
     function updateSyncBtn(state) {
       const btn = document.getElementById('sync-btn');
       btn.classList.remove('active', 'syncing');
-      if (state === 'connected') { btn.textContent = '✓ Drive'; btn.classList.add('active'); }
-      else if (state === 'syncing') { btn.textContent = '⇅ Drive'; btn.classList.add('syncing'); }
-      else { btn.textContent = '⇅ Drive'; }
+      if (state === 'connected') { btn.textContent = '✓ Drive'; btn.classList.add('active'); btn.title = 'Подключено — нажми для синхронизации'; }
+      else if (state === 'syncing') { btn.textContent = '⇅ Drive'; btn.classList.add('active', 'syncing'); btn.title = 'Синхронизация...'; }
+      else { btn.textContent = '⇅ Drive'; btn.title = 'Подключить Google Drive'; }
     }
 
     async function handleSyncClick() {
@@ -848,7 +848,13 @@
     const gsiScript = document.createElement('script');
     gsiScript.src = 'https://accounts.google.com/gsi/client';
     gsiScript.onload = () => {
-      if (getClientId()) initGoogleAuth();
+      if (getClientId()) {
+        initGoogleAuth();
+        // Silent token request — no popup if user already granted access
+        setTimeout(() => {
+          if (tokenClient) tokenClient.requestAccessToken({ prompt: '' });
+        }, 500);
+      }
     };
     document.head.appendChild(gsiScript);
   </script>
