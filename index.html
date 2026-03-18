@@ -5,8 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0f0f0f">
-  <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -575,7 +573,7 @@
 
     function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
     function getGistId() { return localStorage.getItem(GIST_ID_KEY) || ''; }
-    function getFileName() { return localStorage.getItem(FILE_KEY) || ''; }
+    function getFileName() { return localStorage.getItem(FILE_KEY) || 'list.json'; }
 
     // ─── ORDER ────────────────────────────────────────────────────────────────────
     function maxOrder() {
@@ -849,6 +847,11 @@
     sortableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js';
     sortableScript.onload = () => initSortable();
     document.head.appendChild(sortableScript);
+
+    // Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/list/sw.js');
+    }
   </script>
 </body>
 
