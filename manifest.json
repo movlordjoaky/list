@@ -2,7 +2,7 @@
   "name": "Список",
   "short_name": "Список",
   "description": "Простой список с синхронизацией через Github Gist",
-  "start_url": "/index.html",
+  "start_url": "/list/",
   "display": "standalone",
   "background_color": "#0f0f0f",
   "theme_color": "#0f0f0f",
