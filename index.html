@@ -659,14 +659,14 @@
     // ─── ACTIONS ──────────────────────────────────────────────────────────────────
     function addItem(text) {
       if (!text.trim()) return;
-      items.push({ id: Date.now().toString(), text: text.trim(), done: false, order: maxOrder() + 10 });
+      items.push({ id: Date.now().toString(), text: text.trim(), done: false, order: maxOrder() + 10, updatedAt: Date.now() });
       scheduleSave();
       render();
     }
 
     function toggleDone(id) {
       const item = items.find(i => i.id === id);
-      if (item) { item.done = !item.done; scheduleSave(); render(); }
+      if (item) { item.done = !item.done; item.updatedAt = Date.now(); scheduleSave(); render(); }
     }
 
     function deleteItem(id) {
@@ -688,6 +688,21 @@
       saveTimer = setTimeout(() => {
         if (isDirty && getToken() && getGistId()) syncToGist();
       }, 2000);
+    }
+
+    // ─── MERGE ────────────────────────────────────────────────────────────────────
+    function mergeItems(local, remote) {
+      const map = new Map();
+      // Сначала кладём remote
+      remote.forEach(item => map.set(item.id, item));
+      // Локальные перезаписывают если updatedAt новее
+      local.forEach(item => {
+        const rem = map.get(item.id);
+        if (!rem || (item.updatedAt ?? 0) > (rem.updatedAt ?? 0)) {
+          map.set(item.id, item);
+        }
+      });
+      return Array.from(map.values());
     }
 
     // ─── SORTABLE ─────────────────────────────────────────────────────────────────
@@ -768,7 +783,14 @@
         const content = data.files?.[getFileName()]?.content;
         if (content) {
           const remote = JSON.parse(content);
-          if (Array.isArray(remote)) { items = remote; ensureOrder(); saveLocal(); render(); }
+          if (Array.isArray(remote)) {
+            items = mergeItems(items, remote);
+            ensureOrder();
+            saveLocal();
+            render();
+            // Если после слияния есть локальные изменения — отправить обратно
+            if (isDirty) syncToGist();
+          }
         }
         updateSyncBtn('connected');
       } catch (e) { toast('Ошибка: ' + e.message); updateSyncBtn(''); }
