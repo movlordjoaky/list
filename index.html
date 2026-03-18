@@ -540,7 +540,7 @@
 
   <script>
     // ─── STATE ───────────────────────────────────────────────────────────────────
-    const STORAGE_KEY = 'shopping_list_v1';
+    const STORAGE_KEY = 'list_v1';
     const TOKEN_KEY = 'gist_token';
     const GIST_ID_KEY = 'gist_id';
 
@@ -713,7 +713,7 @@
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
-        const content = data.files?.['shopping-list.json']?.content;
+        const content = data.files?.['list.json']?.content;
         if (content) {
           const remote = JSON.parse(content);
           if (Array.isArray(remote)) { items = remote; saveLocal(); render(); }
