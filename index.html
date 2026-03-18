@@ -498,7 +498,7 @@
       </div>
       <div class="header-actions">
         <button id="clear-done" title="Удалить купленные">✕ купленные</button>
-        <button id="sync-btn" class="icon-btn" title="Синхронизация с Google Drive">⇅ Drive</button>
+        <button id="sync-btn" class="icon-btn" title="Синхронизация с GitHub Gist">⇅ Gist</button>
         <button id="settings-btn" class="icon-btn" title="Настройки">⚙</button>
       </div>
     </header>
@@ -652,7 +652,7 @@
       isDirty = true;
       clearTimeout(saveTimer);
       saveTimer = setTimeout(() => {
-        if (isDirty && accessToken) syncToDrive();
+        if (isDirty && getToken() && getGistId()) syncToGist();
       }, 2000);
     }
 
@@ -679,7 +679,6 @@
       });
     }
 
-    // ─── GOOGLE DRIVE ─────────────────────────────────────────────────────────────
     // ─── GIST SYNC ───────────────────────────────────────────────────────────────
     function updateSyncBtn(state) {
       const btn = document.getElementById('sync-btn');
