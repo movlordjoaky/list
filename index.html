@@ -529,7 +529,7 @@
           → галочка gist → No expiration</small></p>
       <input id="input-token" type="text" placeholder="ghp_...">
       <p style="margin-top:10px">Gist ID:<br><small style="color:var(--text-dim)">gist.github.com → New gist → filename:
-          shopping-list.json, content: [] → Create secret gist → ID из адресной строки</small></p>
+          list.json, content: [] → Create secret gist → ID из адресной строки</small></p>
       <input id="input-gist-id" type="text" placeholder="a1b2c3d4e5...">
       <div class="modal-btns">
         <button id="modal-cancel">Отмена</button>
@@ -697,7 +697,7 @@
         await fetch(`https://api.github.com/gists/${gistId}`, {
           method: 'PATCH',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ files: { 'shopping-list.json': { content: JSON.stringify(items) } } })
+          body: JSON.stringify({ files: { 'list.json': { content: JSON.stringify(items) } } })
         });
         isDirty = false;
         updateSyncBtn('connected');
