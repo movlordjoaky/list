@@ -567,6 +567,7 @@
     const FILE_KEY = 'gist_file';
 
     let items = [];
+    let listUpdatedAt = 0;
     let saveTimer = null;
     let isDirty = false;
 
@@ -589,13 +590,17 @@
     function loadLocal() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) items = JSON.parse(raw);
-        ensureOrder();
-      } catch (e) { items = []; }
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          items = parsed.items || [];
+          listUpdatedAt = parsed.listUpdatedAt || 0;
+          ensureOrder();
+        }
+      } catch (e) { items = []; listUpdatedAt = 0; }
     }
 
     function saveLocal() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, listUpdatedAt }));
     }
 
     // ─── RENDER ───────────────────────────────────────────────────────────────────
@@ -634,7 +639,6 @@
           const newText = textEl.textContent.trim();
           if (newText && newText !== item.text) {
             item.text = newText;
-            item.updatedAt = Date.now();
             scheduleSave();
           }
           else if (!newText) deleteItem(item.id);
@@ -663,14 +667,14 @@
     // ─── ACTIONS ──────────────────────────────────────────────────────────────────
     function addItem(text) {
       if (!text.trim()) return;
-      items.push({ id: Date.now().toString(), text: text.trim(), done: false, order: maxOrder() + 10, updatedAt: Date.now() });
+      items.push({ id: Date.now().toString(), text: text.trim(), done: false, order: maxOrder() + 10 });
       scheduleSave();
       render();
     }
 
     function toggleDone(id) {
       const item = items.find(i => i.id === id);
-      if (item) { item.done = !item.done; item.updatedAt = Date.now(); scheduleSave(); render(); }
+      if (item) { item.done = !item.done; scheduleSave(); render(); }
     }
 
     function deleteItem(id) {
@@ -686,6 +690,7 @@
     }
 
     function scheduleSave() {
+      listUpdatedAt = Date.now();
       saveLocal();
       isDirty = true;
       clearTimeout(saveTimer);
@@ -731,16 +736,6 @@
     }
 
     // ─── MERGE ────────────────────────────────────────────────────────────────────
-    function mergeItems(local, remote) {
-      const map = new Map();
-      remote.forEach(item => map.set(item.id, item));
-      local.forEach(item => {
-        const rem = map.get(item.id);
-        if (!rem || (item.updatedAt ?? 0) > (rem.updatedAt ?? 0)) map.set(item.id, item);
-      });
-      return Array.from(map.values());
-    }
-
     // ─── GIST SYNC ────────────────────────────────────────────────────────────────
     let isSyncing = false;
 
@@ -771,23 +766,33 @@
         }
         const data = await res.json();
         const content = data.files?.[fileName]?.content;
+        let shouldUpload = isDirty;
         if (content) {
           let remote;
           try { remote = JSON.parse(content); } catch (e) { toast('Ошибка формата данных'); updateSyncBtn(''); return; }
-          if (Array.isArray(remote)) {
-            items = mergeItems(items, remote);
+          // Побеждает тот у кого listUpdatedAt новее
+          const remoteUpdatedAt = remote.listUpdatedAt ?? 0;
+          if (remoteUpdatedAt > listUpdatedAt) {
+            // Remote новее — берём remote полностью
+            items = remote.items || [];
+            listUpdatedAt = remoteUpdatedAt;
             ensureOrder();
             saveLocal();
             render();
+            shouldUpload = false; // remote уже актуален, не нужно перезаписывать
+          } else if (isDirty) {
+            shouldUpload = true; // локальный новее — загрузим
           }
         }
-        // 2. Загрузить слияние обратно
-        await fetch(`https://api.github.com/gists/${gistId}`, {
-          method: 'PATCH',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ files: { [fileName]: { content: JSON.stringify(items) } } })
-        });
-        isDirty = false;
+        // 2. Загрузить локальный если он новее
+        if (shouldUpload) {
+          await fetch(`https://api.github.com/gists/${gistId}`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ files: { [fileName]: { content: JSON.stringify({ items, listUpdatedAt }) } } })
+          });
+          isDirty = false;
+        }
         updateSyncBtn('connected');
       } catch (e) {
         toast('Ошибка сети');
