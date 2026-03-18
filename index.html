@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Список">
-  <title>Список покупок</title>
+  <title>Список</title>
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -55,7 +55,6 @@
       margin: 0 auto;
     }
 
-    /* HEADER */
     header {
       display: flex;
       align-items: center;
@@ -136,19 +135,45 @@
       }
     }
 
-    /* LIST */
     #list-container {
       flex: 1;
       overflow-y: auto;
       padding: 12px 16px;
       scrollbar-width: thin;
       scrollbar-color: var(--border) transparent;
+      position: relative;
     }
 
-    #list {
+    #list-active,
+    #list-done {
       display: flex;
       flex-direction: column;
       gap: 4px;
+    }
+
+    .divider {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .divider.visible {
+      display: flex;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .divider-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
     }
 
     .item {
@@ -272,10 +297,6 @@
       color: #ff5f5f;
     }
 
-    #list-container {
-      position: relative;
-    }
-
     #empty {
       display: none;
       flex-direction: column;
@@ -299,7 +320,6 @@
       display: flex;
     }
 
-    /* INPUT inline */
     #new-item-row {
       display: flex;
       align-items: center;
@@ -346,7 +366,6 @@
       color: var(--text-dim);
     }
 
-    /* TOAST */
     #toast {
       position: fixed;
       bottom: 30px;
@@ -372,7 +391,6 @@
       transform: translateX(-50%) translateY(0);
     }
 
-    /* MODAL */
     #modal-overlay {
       display: none;
       position: fixed;
@@ -467,7 +485,6 @@
       opacity: 0.85;
     }
 
-    /* Clear done */
     #clear-done {
       display: none;
       font-size: 11px;
@@ -498,19 +515,23 @@
         <span id="item-count"></span>
       </div>
       <div class="header-actions">
-        <button id="clear-done" title="Удалить купленные">✕ купленные</button>
+        <button id="clear-done" title="Удалить отмеченные">✕ отмеч</button>
         <button id="sync-btn" class="icon-btn" title="Синхронизация с GitHub Gist">⇅ Gist</button>
         <button id="settings-btn" class="icon-btn" title="Настройки">⚙</button>
       </div>
     </header>
 
     <div id="list-container">
-      <div id="list"></div>
+      <div id="list-active"></div>
       <div id="new-item-row" onclick="document.getElementById('new-item').focus()">
         <span class="plus">+</span>
         <input id="new-item" type="text" placeholder="добавить товар..." autocomplete="off" autocorrect="off"
           spellcheck="false">
       </div>
+      <div class="divider" id="divider">
+        <div class="divider-line"></div>
+      </div>
+      <div id="list-done"></div>
       <div id="empty">
         <div class="big">🛒</div>
         <div>список пуст</div>
@@ -539,7 +560,6 @@
   </div>
 
   <script>
-    // ─── STATE ───────────────────────────────────────────────────────────────────
     const STORAGE_KEY = 'list_v1';
     const TOKEN_KEY = 'gist_token';
     const GIST_ID_KEY = 'gist_id';
@@ -551,11 +571,23 @@
     function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
     function getGistId() { return localStorage.getItem(GIST_ID_KEY) || ''; }
 
-    // ─── LOAD LOCAL ───────────────────────────────────────────────────────────────
+    // ─── ORDER ────────────────────────────────────────────────────────────────────
+    function maxOrder() {
+      return items.length ? Math.max(...items.map(i => i.order ?? 0)) : 0;
+    }
+
+    function ensureOrder() {
+      items.forEach((item, idx) => {
+        if (item.order === undefined) item.order = idx * 10;
+      });
+    }
+
+    // ─── LOCAL STORAGE ────────────────────────────────────────────────────────────
     function loadLocal() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) items = JSON.parse(raw);
+        ensureOrder();
       } catch (e) { items = []; }
     }
 
@@ -565,45 +597,46 @@
 
     // ─── RENDER ───────────────────────────────────────────────────────────────────
     function render() {
-      const list = document.getElementById('list');
-      list.innerHTML = '';
-      items.forEach((item) => {
+      const active = items.filter(i => !i.done).sort((a, b) => a.order - b.order);
+      const done = items.filter(i => i.done).sort((a, b) => a.order - b.order);
+
+      renderSection('list-active', active);
+      renderSection('list-done', done);
+
+      document.getElementById('divider').classList.toggle('visible', done.length > 0);
+      document.getElementById('empty').classList.toggle('visible', items.length === 0);
+
+      updateCount();
+      updateClearBtn();
+      initSortable();
+    }
+
+    function renderSection(containerId, sectionItems) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      sectionItems.forEach(item => {
         const el = document.createElement('div');
         el.className = 'item' + (item.done ? ' done' : '');
         el.dataset.id = item.id;
-
         el.innerHTML = `
-      <div class="drag-handle" data-handle>⋮⋮</div>
-      <div class="check" data-check></div>
-      <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
-      <button class="del-btn" data-del title="Удалить">×</button>
-    `;
-
+          <div class="drag-handle">⋮⋮</div>
+          <div class="check" data-check></div>
+          <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
+          <button class="del-btn" title="Удалить">×</button>
+        `;
         el.querySelector('[data-check]').addEventListener('click', () => toggleDone(item.id));
-        el.querySelector('[data-del]').addEventListener('click', () => deleteItem(item.id));
-
+        el.querySelector('.del-btn').addEventListener('click', () => deleteItem(item.id));
         const textEl = el.querySelector('.item-text');
         textEl.addEventListener('blur', () => {
           const newText = textEl.textContent.trim();
-          if (newText && newText !== item.text) {
-            item.text = newText;
-            scheduleSave();
-          } else if (!newText) {
-            deleteItem(item.id);
-          }
+          if (newText && newText !== item.text) { item.text = newText; scheduleSave(); }
+          else if (!newText) deleteItem(item.id);
         });
         textEl.addEventListener('keydown', e => {
           if (e.key === 'Enter') { e.preventDefault(); textEl.blur(); }
         });
-
-        list.appendChild(el);
+        container.appendChild(el);
       });
-
-      // empty state
-      document.getElementById('empty').classList.toggle('visible', items.length === 0);
-      updateCount();
-      updateClearBtn();
-      initSortable();
     }
 
     function escHtml(s) {
@@ -613,20 +646,17 @@
     function updateCount() {
       const total = items.length;
       const done = items.filter(i => i.done).length;
-      const el = document.getElementById('item-count');
-      el.textContent = total ? `${done}/${total}` : '';
+      document.getElementById('item-count').textContent = total ? `${done}/${total}` : '';
     }
 
     function updateClearBtn() {
-      const btn = document.getElementById('clear-done');
-      const hasDone = items.some(i => i.done);
-      btn.classList.toggle('visible', hasDone);
+      document.getElementById('clear-done').classList.toggle('visible', items.some(i => i.done));
     }
 
-    // ─── ACTIONS ─────────────────────────────────────────────────────────────────
+    // ─── ACTIONS ──────────────────────────────────────────────────────────────────
     function addItem(text) {
       if (!text.trim()) return;
-      items.push({ id: Date.now().toString(), text: text.trim(), done: false });
+      items.push({ id: Date.now().toString(), text: text.trim(), done: false, order: maxOrder() + 10 });
       scheduleSave();
       render();
     }
@@ -658,29 +688,42 @@
     }
 
     // ─── SORTABLE ─────────────────────────────────────────────────────────────────
-    let sortableInstance = null;
+    let sortableActive = null;
+    let sortableDone = null;
 
     function initSortable() {
-      if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
-      const list = document.getElementById('list');
-      if (!window.Sortable || list.children.length === 0) return;
-      sortableInstance = Sortable.create(list, {
-        handle: '.drag-handle',
-        animation: 120,
-        ghostClass: 'dragging',
-        chosenClass: 'drag-over',
-        forceFallback: false,
-        onEnd(evt) {
-          const { oldIndex, newIndex } = evt;
-          if (oldIndex === newIndex) return;
-          const [moved] = items.splice(oldIndex, 1);
-          items.splice(newIndex, 0, moved);
-          scheduleSave();
-        }
-      });
+      if (sortableActive) { sortableActive.destroy(); sortableActive = null; }
+      if (sortableDone) { sortableDone.destroy(); sortableDone = null; }
+      if (!window.Sortable) return;
+
+      function makeOpts(doneSection) {
+        return {
+          handle: '.drag-handle',
+          animation: 120,
+          ghostClass: 'dragging',
+          chosenClass: 'drag-over',
+          onEnd(evt) {
+            const { oldIndex, newIndex } = evt;
+            if (oldIndex === newIndex) return;
+            const section = items.filter(i => i.done === doneSection).sort((a, b) => a.order - b.order);
+            const moved = section[oldIndex];
+            if (!moved) return;
+            section.splice(oldIndex, 1);
+            section.splice(newIndex, 0, moved);
+            section.forEach((item, idx) => { item.order = (idx + 1) * 10; });
+            scheduleSave();
+            render();
+          }
+        };
+      }
+
+      const activeEl = document.getElementById('list-active');
+      const doneEl = document.getElementById('list-done');
+      if (activeEl.children.length > 0) sortableActive = Sortable.create(activeEl, makeOpts(false));
+      if (doneEl.children.length > 0) sortableDone = Sortable.create(doneEl, makeOpts(true));
     }
 
-    // ─── GIST SYNC ───────────────────────────────────────────────────────────────
+    // ─── GIST SYNC ────────────────────────────────────────────────────────────────
     function updateSyncBtn(state) {
       const btn = document.getElementById('sync-btn');
       btn.classList.remove('active', 'syncing');
@@ -722,7 +765,7 @@
         const content = data.files?.['list.json']?.content;
         if (content) {
           const remote = JSON.parse(content);
-          if (Array.isArray(remote)) { items = remote; saveLocal(); render(); }
+          if (Array.isArray(remote)) { items = remote; ensureOrder(); saveLocal(); render(); }
         }
         updateSyncBtn('connected');
       } catch (e) { toast('Ошибка: ' + e.message); updateSyncBtn(''); }
@@ -737,10 +780,9 @@
 
     // ─── MODAL ────────────────────────────────────────────────────────────────────
     function showModal() {
-      const overlay = document.getElementById('modal-overlay');
       document.getElementById('input-token').value = getToken();
       document.getElementById('input-gist-id').value = getGistId();
-      overlay.classList.add('show');
+      document.getElementById('modal-overlay').classList.add('show');
     }
 
     document.getElementById('modal-cancel').addEventListener('click', () => {
@@ -776,34 +818,27 @@
     loadLocal();
     render();
 
-    // Auto-sync on load if configured
     if (getToken() && getGistId()) {
       updateSyncBtn('syncing');
       syncFromGist();
     }
 
     document.getElementById('new-item').addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        addItem(e.target.value);
-        e.target.value = '';
-      }
+      if (e.key === 'Enter') { addItem(e.target.value); e.target.value = ''; }
     });
 
     document.getElementById('sync-btn').addEventListener('click', handleSyncClick);
     document.getElementById('settings-btn').addEventListener('click', showModal);
     document.getElementById('clear-done').addEventListener('click', clearDone);
 
-    // Auto-poll every minute
     setInterval(() => {
       if (getToken() && getGistId()) syncFromGist();
     }, 60000);
+
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && getToken() && getGistId()) {
-        syncFromGist();
-      }
+      if (document.visibilityState === 'visible' && getToken() && getGistId()) syncFromGist();
     });
 
-    // Load SortableJS
     const sortableScript = document.createElement('script');
     sortableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js';
     sortableScript.onload = () => initSortable();
