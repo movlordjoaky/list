@@ -793,6 +793,11 @@
     document.getElementById('settings-btn').addEventListener('click', showModal);
     document.getElementById('clear-done').addEventListener('click', clearDone);
 
+    // Auto-poll every minute
+    setInterval(() => {
+      if (getToken() && getGistId()) syncFromGist();
+    }, 60000);
+
     // Load SortableJS
     const sortableScript = document.createElement('script');
     sortableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js';
