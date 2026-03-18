@@ -709,8 +709,8 @@
       if (!token || !gistId) return;
       updateSyncBtn('syncing');
       try {
-        const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-          headers: { Authorization: `Bearer ${token}` }
+        const res = await fetch(`https://api.github.com/gists/${gistId}?t=${Date.now()}`, {
+          headers: { Authorization: `Bearer ${token}`, 'Cache-Control': 'no-cache' }
         });
         const data = await res.json();
         const content = data.files?.['list.json']?.content;
