@@ -712,6 +712,12 @@
         const res = await fetch(`https://api.github.com/gists/${gistId}?t=${Date.now()}`, {
           headers: { Authorization: `Bearer ${token}`, 'Cache-Control': 'no-cache' }
         });
+        if (!res.ok) {
+          const err = await res.json();
+          toast(`Ошибка ${res.status}: ${err.message}`);
+          updateSyncBtn('');
+          return;
+        }
         const data = await res.json();
         const content = data.files?.['list.json']?.content;
         if (content) {
@@ -719,7 +725,7 @@
           if (Array.isArray(remote)) { items = remote; saveLocal(); render(); }
         }
         updateSyncBtn('connected');
-      } catch (e) { toast('Ошибка загрузки'); updateSyncBtn(''); }
+      } catch (e) { toast('Ошибка: ' + e.message); updateSyncBtn(''); }
     }
 
     async function handleSyncClick() {
