@@ -632,7 +632,11 @@
         const textEl = el.querySelector('.item-text');
         textEl.addEventListener('blur', () => {
           const newText = textEl.textContent.trim();
-          if (newText && newText !== item.text) { item.text = newText; scheduleSave(); }
+          if (newText && newText !== item.text) {
+            item.text = newText;
+            item.updatedAt = Date.now();
+            scheduleSave();
+          }
           else if (!newText) deleteItem(item.id);
         });
         textEl.addEventListener('keydown', e => {
@@ -686,23 +690,8 @@
       isDirty = true;
       clearTimeout(saveTimer);
       saveTimer = setTimeout(() => {
-        if (isDirty && getToken() && getGistId()) syncToGist();
+        if (isDirty && getToken() && getGistId()) sync();
       }, 2000);
-    }
-
-    // ─── MERGE ────────────────────────────────────────────────────────────────────
-    function mergeItems(local, remote) {
-      const map = new Map();
-      // Сначала кладём remote
-      remote.forEach(item => map.set(item.id, item));
-      // Локальные перезаписывают если updatedAt новее
-      local.forEach(item => {
-        const rem = map.get(item.id);
-        if (!rem || (item.updatedAt ?? 0) > (rem.updatedAt ?? 0)) {
-          map.set(item.id, item);
-        }
-      });
-      return Array.from(map.values());
     }
 
     // ─── SORTABLE ─────────────────────────────────────────────────────────────────
@@ -741,7 +730,20 @@
       if (doneEl.children.length > 0) sortableDone = Sortable.create(doneEl, makeOpts(true));
     }
 
+    // ─── MERGE ────────────────────────────────────────────────────────────────────
+    function mergeItems(local, remote) {
+      const map = new Map();
+      remote.forEach(item => map.set(item.id, item));
+      local.forEach(item => {
+        const rem = map.get(item.id);
+        if (!rem || (item.updatedAt ?? 0) > (rem.updatedAt ?? 0)) map.set(item.id, item);
+      });
+      return Array.from(map.values());
+    }
+
     // ─── GIST SYNC ────────────────────────────────────────────────────────────────
+    let isSyncing = false;
+
     function updateSyncBtn(state) {
       const btn = document.getElementById('sync-btn');
       btn.classList.remove('active', 'syncing');
@@ -750,26 +752,14 @@
       else { btn.textContent = '⇅ Sync'; btn.title = 'Настроить синхронизацию'; }
     }
 
-    async function syncToGist() {
-      const token = getToken(), gistId = getGistId();
-      if (!token || !gistId) return;
+    async function sync() {
+      if (isSyncing) return;
+      const token = getToken(), gistId = getGistId(), fileName = getFileName();
+      if (!token || !gistId || !fileName) return;
+      isSyncing = true;
       updateSyncBtn('syncing');
       try {
-        await fetch(`https://api.github.com/gists/${gistId}`, {
-          method: 'PATCH',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ files: { [getFileName()]: { content: JSON.stringify(items) } } })
-        });
-        isDirty = false;
-        updateSyncBtn('connected');
-      } catch (e) { toast('Ошибка сохранения'); updateSyncBtn('connected'); }
-    }
-
-    async function syncFromGist() {
-      const token = getToken(), gistId = getGistId();
-      if (!token || !gistId) return;
-      updateSyncBtn('syncing');
-      try {
+        // 1. Скачать remote
         const res = await fetch(`https://api.github.com/gists/${gistId}?t=${Date.now()}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -780,30 +770,36 @@
           return;
         }
         const data = await res.json();
-        const content = data.files?.[getFileName()]?.content;
+        const content = data.files?.[fileName]?.content;
         if (content) {
           let remote;
           try { remote = JSON.parse(content); } catch (e) { toast('Ошибка формата данных'); updateSyncBtn(''); return; }
           if (Array.isArray(remote)) {
-            const hadDirty = isDirty;
             items = mergeItems(items, remote);
             ensureOrder();
-            isDirty = false;
             saveLocal();
             render();
-            // Если были локальные изменения — отправить слияние обратно
-            if (hadDirty) await syncToGist();
           }
         }
+        // 2. Загрузить слияние обратно
+        await fetch(`https://api.github.com/gists/${gistId}`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ files: { [fileName]: { content: JSON.stringify(items) } } })
+        });
+        isDirty = false;
         updateSyncBtn('connected');
-      } catch (e) { toast('Ошибка сети'); updateSyncBtn(''); }
+      } catch (e) {
+        toast('Ошибка сети');
+        updateSyncBtn('');
+      } finally {
+        isSyncing = false;
+      }
     }
 
     async function handleSyncClick() {
-      if (!getToken() || !getGistId()) { showModal(); return; }
-      updateSyncBtn('syncing');
-      await syncToGist();
-      await syncFromGist();
+      if (!getToken() || !getGistId() || !getFileName()) { showModal(); return; }
+      await sync();
     }
 
     // ─── MODAL ────────────────────────────────────────────────────────────────────
@@ -825,7 +821,7 @@
       localStorage.setItem(FILE_KEY, lines[2]);
       document.getElementById('modal-overlay').classList.remove('show');
       toast('Настройки сохранены');
-      await syncFromGist();
+      await sync();
     });
 
     document.getElementById('modal-overlay').addEventListener('click', e => {
@@ -848,7 +844,7 @@
 
     if (getToken() && getGistId()) {
       updateSyncBtn('syncing');
-      syncFromGist();
+      sync();
     }
 
     document.getElementById('new-item').addEventListener('keydown', e => {
@@ -860,14 +856,14 @@
     document.getElementById('clear-done').addEventListener('click', clearDone);
 
     setInterval(() => {
-      if (getToken() && getGistId()) syncFromGist();
+      if (getToken() && getGistId()) sync();
     }, 60000);
 
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && getToken() && getGistId()) syncFromGist();
+      if (document.visibilityState === 'visible' && getToken() && getGistId()) sync();
     });
     window.addEventListener('online', () => {
-      if (getToken() && getGistId()) syncFromGist();
+      if (getToken() && getGistId()) sync();
     });
 
     const sortableScript = document.createElement('script');
