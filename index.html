@@ -117,7 +117,6 @@
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
       gap: 12px;
-      height: 65px;
     }
 
     .header-left {
@@ -208,36 +207,7 @@
       }
     }
 
-    /* Mobile swipe dots */
-    #swipe-dots {
-      display: none;
-      justify-content: center;
-      gap: 6px;
-      padding: 8px 0;
-      flex-shrink: 0;
-    }
 
-    @media (max-width: 1080px) {
-      #swipe-dots {
-        display: flex;
-      }
-    }
-
-    .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--border);
-      transition: background 0.2s;
-    }
-
-    .dot.green.active {
-      background: var(--green);
-    }
-
-    .dot.blue.active {
-      background: var(--blue);
-    }
 
     /* ── LIST ── */
     .list-container {
@@ -623,10 +593,6 @@
 </head>
 
 <body>
-  <div id="swipe-dots">
-    <div class="dot green active" id="dot-green"></div>
-    <div class="dot blue" id="dot-blue"></div>
-  </div>
 
   <div id="app">
     <div id="swipe-container">
@@ -671,6 +637,8 @@
           </div>
           <div class="header-actions">
             <button class="clear-done icon-btn" id="clear-blue" title="Удалить отмеченные">✕ отмеч</button>
+            <button class="sync-btn icon-btn" id="sync-btn-blue" title="Синхронизация">⇅ Gist</button>
+            <button class="icon-btn" id="settings-btn-blue" title="Настройки">⚙</button>
           </div>
         </div>
         <div class="list-container" id="container-blue">
@@ -887,11 +855,13 @@
 
     // ── SYNC ──
     function updateSyncBtn(state) {
-      const btn = document.getElementById('sync-btn');
-      btn.classList.remove('active', 'syncing');
-      if (state === 'connected') { btn.textContent = '✓ Gist'; btn.classList.add('active'); }
-      else if (state === 'syncing') { btn.textContent = '⇅ Gist'; btn.classList.add('syncing'); }
-      else { btn.textContent = '⇅ Sync'; }
+      ['sync-btn', 'sync-btn-blue'].forEach(id => {
+        const btn = document.getElementById(id);
+        btn.classList.remove('active', 'syncing');
+        if (state === 'connected') { btn.textContent = '✓ Gist'; btn.classList.add('active'); }
+        else if (state === 'syncing') { btn.textContent = '⇅ Gist'; btn.classList.add('syncing'); }
+        else { btn.textContent = '⇅ Sync'; }
+      });
     }
 
     async function sync() {
@@ -955,10 +925,7 @@
 
     function switchTab(color) {
       currentTab = color;
-      const container = document.getElementById('swipe-container');
-      container.classList.toggle('show-blue', color === 'blue');
-      document.getElementById('dot-green').classList.toggle('active', color === 'green');
-      document.getElementById('dot-blue').classList.toggle('active', color === 'blue');
+      document.getElementById('swipe-container').classList.toggle('show-blue', color === 'blue');
     }
 
     const swipeEl = document.getElementById('swipe-container');
@@ -972,8 +939,7 @@
       const dx = e.changedTouches[0].clientX - swipeStartX;
       const dy = e.changedTouches[0].clientY - swipeStartY;
       if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-        if (dx < 0 && currentTab === 'green') switchTab('blue');
-        else if (dx > 0 && currentTab === 'blue') switchTab('green');
+        switchTab(currentTab === 'green' ? 'blue' : 'green');
       }
     }, { passive: true });
 
@@ -1031,7 +997,12 @@
       if (!getToken() || !getGistId() || !getFileName()) { showModal(); return; }
       sync();
     });
+    document.getElementById('sync-btn-blue').addEventListener('click', () => {
+      if (!getToken() || !getGistId() || !getFileName()) { showModal(); return; }
+      sync();
+    });
     document.getElementById('settings-btn').addEventListener('click', showModal);
+    document.getElementById('settings-btn-blue').addEventListener('click', showModal);
     document.getElementById('clear-green').addEventListener('click', () => clearDone('green'));
     document.getElementById('clear-blue').addEventListener('click', () => clearDone('blue'));
 
