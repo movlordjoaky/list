@@ -824,7 +824,33 @@
           else if (!t) deleteItem(color, item.id);
         });
         textEl.addEventListener('keydown', e => {
-          if (e.key === 'Enter') { e.preventDefault(); textEl.blur(); }
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            textEl.blur();
+            // Insert new item after current
+            const sectionItems = lists[color].items
+              .filter(i => i.done === item.done)
+              .sort((a, b) => a.order - b.order);
+            const idx = sectionItems.findIndex(i => i.id === item.id);
+            const next = sectionItems[idx + 1];
+            const newOrder = next
+              ? (item.order + next.order) / 2
+              : item.order + 10;
+            const newId = Date.now().toString();
+            lists[color].items.push({ id: newId, text: '', done: item.done, order: newOrder });
+            scheduleSave();
+            render(color);
+            // Focus new item
+            setTimeout(() => {
+              const newEl = document.querySelector(`[data-id="${newId}"] .item-text`);
+              if (newEl) { newEl.focus(); }
+            }, 0);
+          } else if ((e.key === 'Backspace' || e.key === 'Delete') && textEl.textContent.trim() === '') {
+            e.preventDefault();
+            deleteItem(color, item.id);
+          } else if (e.key === 'Escape') {
+            textEl.blur();
+          }
         });
         container.appendChild(el);
       });
