@@ -39,6 +39,7 @@
       --radius: 10px;
       --font: 'Martian Mono', monospace;
       --list-width: 540px;
+      --panel-transition: transform 0.3s cubic-bezier(.4, 0, .2, 1);
     }
 
     html,
@@ -52,22 +53,27 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* ── LAYOUT ── */
     #app {
       display: flex;
-      flex-direction: column;
       height: 100dvh;
       overflow: hidden;
     }
 
-    /* Desktop: side by side, always 540px each */
+    /* ── DESKTOP ── */
     @media (min-width: 1081px) {
       #app {
         flex-direction: row;
         justify-content: center;
       }
 
+      #swipe-container {
+        display: contents;
+      }
+
       .list-panel {
+        position: relative !important;
+        transform: none !important;
+        transition: none !important;
         width: var(--list-width);
         flex-shrink: 0;
         display: flex;
@@ -79,32 +85,40 @@
       .list-panel:last-child {
         border-right: none;
       }
-
-      #swipe-container {
-        display: contents;
-      }
     }
 
-    /* Mobile: swipe */
+    /* ── MOBILE ── */
     @media (max-width: 1080px) {
-      #swipe-container {
-        display: flex;
-        flex: 1;
-        width: 200%;
-        transition: transform 0.3s cubic-bezier(.4, 0, .2, 1);
-        will-change: transform;
+      #app {
+        flex-direction: column;
       }
 
-      #swipe-container.show-blue {
-        transform: translateX(-50%);
+      #swipe-container {
+        position: relative;
+        flex: 1;
+        overflow: hidden;
       }
 
       .list-panel {
-        width: 50%;
-        flex-shrink: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         display: flex;
         flex-direction: column;
-        height: 100%;
+        transition: var(--panel-transition);
+        will-change: transform;
+        background: var(--bg);
+      }
+
+      /* green visible by default, blue off right */
+      #panel-green {
+        transform: translateX(0);
+      }
+
+      #panel-blue {
+        transform: translateX(100%);
       }
     }
 
@@ -212,10 +226,10 @@
     .list-container {
       flex: 1;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       padding: 12px 16px;
       scrollbar-width: thin;
       scrollbar-color: var(--border) transparent;
-      position: relative;
     }
 
     .list-active,
@@ -596,7 +610,7 @@
   <div id="app">
     <div id="swipe-container">
 
-      <!-- GREEN LIST -->
+      <!-- GREEN -->
       <div class="list-panel green-panel" id="panel-green">
         <div class="panel-header">
           <div class="header-left">
@@ -609,7 +623,7 @@
             <button class="icon-btn" id="settings-btn" title="Настройки">⚙</button>
           </div>
         </div>
-        <div class="list-container" id="container-green">
+        <div class="list-container">
           <div class="list-active" id="active-green"></div>
           <div class="new-item-row" onclick="document.getElementById('input-green').focus()">
             <span class="plus">+</span>
@@ -627,7 +641,7 @@
         </div>
       </div>
 
-      <!-- BLUE LIST -->
+      <!-- BLUE -->
       <div class="list-panel blue-panel" id="panel-blue">
         <div class="panel-header">
           <div class="header-left">
@@ -640,7 +654,7 @@
             <button class="icon-btn" id="settings-btn-blue" title="Настройки">⚙</button>
           </div>
         </div>
-        <div class="list-container" id="container-blue">
+        <div class="list-container">
           <div class="list-active" id="active-blue"></div>
           <div class="new-item-row" onclick="document.getElementById('input-blue').focus()">
             <span class="plus">+</span>
@@ -698,13 +712,13 @@
     let isDirty = false;
     let isSyncing = false;
     let sortables = {};
+    let currentTab = 'green';
 
     // ── ORDER ──
     function maxOrder(color) {
-      const items = lists[color].items;
-      return items.length ? Math.max(...items.map(i => i.order ?? 0)) : 0;
+      const it = lists[color].items;
+      return it.length ? Math.max(...it.map(i => i.order ?? 0)) : 0;
     }
-
     function ensureOrder(color) {
       lists[color].items.forEach((item, idx) => {
         if (item.order === undefined) item.order = idx * 10;
@@ -716,18 +730,17 @@
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
-          const parsed = JSON.parse(raw);
-          for (const color of ['green', 'blue']) {
-            if (parsed[color]) {
-              lists[color].items = parsed[color].items || [];
-              lists[color].listUpdatedAt = parsed[color].listUpdatedAt || 0;
-              ensureOrder(color);
+          const p = JSON.parse(raw);
+          for (const c of ['green', 'blue']) {
+            if (p[c]) {
+              lists[c].items = p[c].items || [];
+              lists[c].listUpdatedAt = p[c].listUpdatedAt || 0;
+              ensureOrder(c);
             }
           }
         }
       } catch (e) { }
     }
-
     function saveLocal() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
     }
@@ -744,8 +757,8 @@
       document.getElementById(`divider-${color}`).classList.toggle('visible', done.length > 0);
       document.getElementById(`empty-${color}`).classList.toggle('visible', l.items.length === 0);
 
-      const total = l.items.length, doneCount = done.length;
-      document.getElementById(`count-${color}`).textContent = total ? `${doneCount}/${total}` : '';
+      const total = l.items.length;
+      document.getElementById(`count-${color}`).textContent = total ? `${done.length}/${total}` : '';
       document.getElementById(`clear-${color}`).classList.toggle('visible', done.length > 0);
 
       initSortable(color);
@@ -759,18 +772,18 @@
         el.className = 'item' + (item.done ? ' done' : '');
         el.dataset.id = item.id;
         el.innerHTML = `
-          <div class="drag-handle">⋮⋮</div>
-          <div class="check" data-check></div>
-          <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
-          <button class="del-btn" title="Удалить">×</button>
-        `;
+        <div class="drag-handle">⋮⋮</div>
+        <div class="check" data-check></div>
+        <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
+        <button class="del-btn" title="Удалить">×</button>
+      `;
         el.querySelector('[data-check]').addEventListener('click', () => toggleDone(color, item.id));
         el.querySelector('.del-btn').addEventListener('click', () => deleteItem(color, item.id));
         const textEl = el.querySelector('.item-text');
         textEl.addEventListener('blur', () => {
-          const newText = textEl.textContent.trim();
-          if (newText && newText !== item.text) { item.text = newText; scheduleSave(); }
-          else if (!newText) deleteItem(color, item.id);
+          const t = textEl.textContent.trim();
+          if (t && t !== item.text) { item.text = t; scheduleSave(); }
+          else if (!t) deleteItem(color, item.id);
         });
         textEl.addEventListener('keydown', e => {
           if (e.key === 'Enter') { e.preventDefault(); textEl.blur(); }
@@ -782,34 +795,26 @@
     function escHtml(s) {
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
-
     function renderAll() { render('green'); render('blue'); }
 
     // ── ACTIONS ──
     function addItem(color, text) {
       if (!text.trim()) return;
       lists[color].items.push({ id: Date.now().toString(), text: text.trim(), done: false, order: maxOrder(color) + 10 });
-      scheduleSave();
-      render(color);
+      scheduleSave(); render(color);
     }
-
     function toggleDone(color, id) {
       const item = lists[color].items.find(i => i.id === id);
       if (item) { item.done = !item.done; scheduleSave(); render(color); }
     }
-
     function deleteItem(color, id) {
       lists[color].items = lists[color].items.filter(i => i.id !== id);
-      scheduleSave();
-      render(color);
+      scheduleSave(); render(color);
     }
-
     function clearDone(color) {
       lists[color].items = lists[color].items.filter(i => !i.done);
-      scheduleSave();
-      render(color);
+      scheduleSave(); render(color);
     }
-
     function scheduleSave() {
       const now = Date.now();
       lists.green.listUpdatedAt = now;
@@ -835,7 +840,6 @@
           animation: 120,
           ghostClass: 'sortable-ghost',
           chosenClass: 'sortable-chosen',
-          forceFallback: true,
           onEnd(evt) {
             const { oldIndex, newIndex } = evt;
             if (oldIndex === newIndex) return;
@@ -845,12 +849,58 @@
             sec.splice(oldIndex, 1);
             sec.splice(newIndex, 0, moved);
             sec.forEach((item, idx) => { item.order = (idx + 1) * 10; });
-            scheduleSave();
-            render(color);
+            scheduleSave(); render(color);
           }
         });
       });
     }
+
+    // ── SWIPE ──
+    // direction: 'left' = finger moves left (current slides left, next comes from right)
+    //            'right' = finger moves right (current slides right, next comes from left)
+    function switchTab(color, direction) {
+      if (color === currentTab) return;
+      const fromPanel = document.getElementById(`panel-${currentTab}`);
+      const toPanel = document.getElementById(`panel-${color}`);
+
+      const outX = direction === 'left' ? '-100%' : '100%';
+      const inX = direction === 'left' ? '100%' : '-100%';
+
+      // Position target instantly (no transition)
+      toPanel.style.transition = 'none';
+      toPanel.style.transform = `translateX(${inX})`;
+
+      // Force reflow so the above takes effect immediately
+      toPanel.offsetHeight; // eslint-disable-line
+
+      // Now animate both
+      const t = 'transform 0.3s cubic-bezier(.4,0,.2,1)';
+      fromPanel.style.transition = t;
+      toPanel.style.transition = t;
+      fromPanel.style.transform = `translateX(${outX})`;
+      toPanel.style.transform = 'translateX(0)';
+
+      currentTab = color;
+    }
+
+    // Touch swipe detection
+    let touchStartX = 0, touchStartY = 0;
+
+    document.getElementById('swipe-container').addEventListener('touchstart', e => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    document.getElementById('swipe-container').addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      // Only horizontal swipe, ignore vertical scroll
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+        const direction = dx < 0 ? 'left' : 'right';
+        const target = currentTab === 'green' ? 'blue' : 'green';
+        switchTab(target, direction);
+      }
+    }, { passive: true });
 
     // ── SYNC ──
     function updateSyncBtn(state) {
@@ -885,16 +935,13 @@
         if (content) {
           let remote;
           try { remote = JSON.parse(content); } catch (e) { toast('Ошибка формата данных'); updateSyncBtn(''); return; }
-
           let changed = false;
           for (const color of ['green', 'blue']) {
             const rem = remote[color];
             if (!rem) continue;
-            const remoteTs = rem.listUpdatedAt ?? 0;
-            const localTs = lists[color].listUpdatedAt ?? 0;
-            if (remoteTs > localTs) {
+            if ((rem.listUpdatedAt ?? 0) > (lists[color].listUpdatedAt ?? 0)) {
               lists[color].items = rem.items || [];
-              lists[color].listUpdatedAt = remoteTs;
+              lists[color].listUpdatedAt = rem.listUpdatedAt;
               ensureOrder(color);
               changed = true;
             }
@@ -919,41 +966,15 @@
       }
     }
 
-    // ── SWIPE ──
-    let swipeStartX = 0, swipeStartY = 0, currentTab = 'green';
-
-    function switchTab(color) {
-      currentTab = color;
-      document.getElementById('swipe-container').classList.toggle('show-blue', color === 'blue');
-    }
-
-    const swipeEl = document.getElementById('swipe-container');
-
-    swipeEl.addEventListener('touchstart', e => {
-      swipeStartX = e.touches[0].clientX;
-      swipeStartY = e.touches[0].clientY;
-    }, { passive: true });
-
-    swipeEl.addEventListener('touchend', e => {
-      const dx = e.changedTouches[0].clientX - swipeStartX;
-      const dy = e.changedTouches[0].clientY - swipeStartY;
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-        if (dx < 0 && currentTab === 'green') switchTab('blue');
-        else if (dx > 0 && currentTab === 'blue') switchTab('green');
-      }
-    }, { passive: true });
-
     // ── MODAL ──
     function showModal() {
       const cfg = [getToken(), getGistId(), getFileName()].filter(Boolean).join('\n');
       document.getElementById('input-config').value = cfg;
       document.getElementById('modal-overlay').classList.add('show');
     }
-
     document.getElementById('modal-cancel').addEventListener('click', () => {
       document.getElementById('modal-overlay').classList.remove('show');
     });
-
     document.getElementById('modal-save').addEventListener('click', async () => {
       const lines = document.getElementById('input-config').value.trim().split('\n').map(l => l.trim()).filter(Boolean);
       if (lines.length < 3) { toast('Нужно три строки'); return; }
@@ -964,7 +985,6 @@
       toast('Настройки сохранены');
       await sync();
     });
-
     document.getElementById('modal-overlay').addEventListener('click', e => {
       if (e.target === e.currentTarget) e.currentTarget.classList.remove('show');
     });
