@@ -448,6 +448,7 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && getToken() && getGistId()) sync();
 });
 window.addEventListener('online', () => { if (getToken() && getGistId()) sync(); });
+window.addEventListener('focus', () => { if (getToken() && getGistId()) sync(); });
 
 const sortableScript = document.createElement('script');
 sortableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js';
