@@ -29,13 +29,16 @@
       --surface: #1a1a1a;
       --surface2: #242424;
       --border: #2e2e2e;
-      --accent: #c8f135;
-      --accent-dim: rgba(200, 241, 53, 0.12);
+      --green: #c8f135;
+      --green-dim: rgba(200, 241, 53, 0.12);
+      --blue: #5b9cf6;
+      --blue-dim: rgba(91, 156, 246, 0.12);
       --text: #f0f0f0;
       --text-dim: #666;
       --done-color: #444;
       --radius: 10px;
       --font: 'Martian Mono', monospace;
+      --list-width: 540px;
     }
 
     html,
@@ -45,19 +48,68 @@
       color: var(--text);
       font-family: var(--font);
       font-size: 14px;
-      overscroll-behavior-x: none;
+      overscroll-behavior: none;
       -webkit-tap-highlight-color: transparent;
     }
 
+    /* ── LAYOUT ── */
     #app {
       display: flex;
       flex-direction: column;
       height: 100dvh;
-      max-width: 540px;
-      margin: 0 auto;
+      overflow: hidden;
     }
 
-    header {
+    /* Desktop: side by side, always 540px each */
+    @media (min-width: 1081px) {
+      #app {
+        flex-direction: row;
+        justify-content: center;
+      }
+
+      .list-panel {
+        width: var(--list-width);
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+        border-right: 1px solid var(--border);
+      }
+
+      .list-panel:last-child {
+        border-right: none;
+      }
+
+      #swipe-container {
+        display: contents;
+      }
+    }
+
+    /* Mobile: swipe */
+    @media (max-width: 1080px) {
+      #swipe-container {
+        display: flex;
+        flex: 1;
+        width: 200%;
+        transition: transform 0.3s cubic-bezier(.4, 0, .2, 1);
+        will-change: transform;
+      }
+
+      #swipe-container.show-blue {
+        transform: translateX(-50%);
+      }
+
+      .list-panel {
+        width: 50%;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+    }
+
+    /* ── HEADER ── */
+    .panel-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -73,14 +125,21 @@
       gap: 10px;
     }
 
-    h1 {
+    .panel-title {
       font-size: 15px;
       font-weight: 500;
       letter-spacing: 0.05em;
-      color: var(--accent);
     }
 
-    #item-count {
+    .green-panel .panel-title {
+      color: var(--green);
+    }
+
+    .blue-panel .panel-title {
+      color: var(--blue);
+    }
+
+    .item-count {
       font-size: 11px;
       color: var(--text-dim);
       font-weight: 300;
@@ -105,23 +164,34 @@
       white-space: nowrap;
     }
 
-    .icon-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
+    .green-panel .icon-btn:hover {
+      border-color: var(--green);
+      color: var(--green);
     }
 
-    .icon-btn.active {
-      border-color: var(--accent);
-      color: var(--accent);
-      background: var(--accent-dim);
+    .green-panel .icon-btn.active {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--green-dim);
     }
 
-    #sync-btn {
+    .blue-panel .icon-btn:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .blue-panel .icon-btn.active {
+      border-color: var(--blue);
+      color: var(--blue);
+      background: var(--blue-dim);
+    }
+
+    .sync-btn {
       min-width: 80px;
       font-size: 11px;
     }
 
-    #sync-btn.syncing {
+    .sync-btn.syncing {
       animation: pulse 1s infinite;
     }
 
@@ -137,7 +207,39 @@
       }
     }
 
-    #list-container {
+    /* Mobile swipe dots */
+    #swipe-dots {
+      display: none;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 0;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 1080px) {
+      #swipe-dots {
+        display: flex;
+      }
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.2s;
+    }
+
+    .dot.green.active {
+      background: var(--green);
+    }
+
+    .dot.blue.active {
+      background: var(--blue);
+    }
+
+    /* ── LIST ── */
+    .list-container {
       flex: 1;
       overflow-y: auto;
       padding: 12px 16px;
@@ -146,8 +248,8 @@
       position: relative;
     }
 
-    #list-active,
-    #list-done {
+    .list-active,
+    .list-done {
       display: flex;
       flex-direction: column;
       gap: 4px;
@@ -168,14 +270,6 @@
       flex: 1;
       height: 1px;
       background: var(--border);
-    }
-
-    .divider-label {
-      font-size: 10px;
-      color: var(--text-dim);
-      font-weight: 300;
-      letter-spacing: 0.08em;
-      white-space: nowrap;
     }
 
     .item {
@@ -201,14 +295,18 @@
       opacity: 0.45;
     }
 
-    .item.dragging {
+    .item.sortable-ghost {
       opacity: 0.3;
-      border-color: var(--accent);
     }
 
-    .item.drag-over {
-      border-color: var(--accent);
-      background: var(--accent-dim);
+    .green-panel .item.sortable-chosen {
+      border-color: var(--green);
+      background: var(--green-dim);
+    }
+
+    .blue-panel .item.sortable-chosen {
+      border-color: var(--blue);
+      background: var(--blue-dim);
     }
 
     .drag-handle {
@@ -238,9 +336,14 @@
       transition: all 0.15s;
     }
 
-    .item.done .check {
-      background: var(--accent);
-      border-color: var(--accent);
+    .green-panel .item.done .check {
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .blue-panel .item.done .check {
+      background: var(--blue);
+      border-color: var(--blue);
     }
 
     .check::after {
@@ -299,7 +402,7 @@
       color: #ff5f5f;
     }
 
-    #empty {
+    .empty-state {
       display: none;
       flex-direction: column;
       align-items: center;
@@ -313,16 +416,16 @@
       text-align: center;
     }
 
-    #empty .big {
+    .empty-state .big {
       font-size: 36px;
       margin-bottom: 4px;
     }
 
-    #empty.visible {
+    .empty-state.visible {
       display: flex;
     }
 
-    #new-item-row {
+    .new-item-row {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -335,12 +438,17 @@
       cursor: text;
     }
 
-    #new-item-row:focus-within {
-      border-color: var(--accent);
+    .green-panel .new-item-row:focus-within {
+      border-color: var(--green);
       border-style: solid;
     }
 
-    #new-item-row .plus {
+    .blue-panel .new-item-row:focus-within {
+      border-color: var(--blue);
+      border-style: solid;
+    }
+
+    .new-item-row .plus {
       color: var(--text-dim);
       font-size: 18px;
       flex-shrink: 0;
@@ -349,7 +457,7 @@
       font-weight: 300;
     }
 
-    #new-item {
+    .new-item-input {
       flex: 1;
       background: none;
       border: none;
@@ -364,10 +472,31 @@
       padding: 0;
     }
 
-    #new-item::placeholder {
+    .new-item-input::placeholder {
       color: var(--text-dim);
     }
 
+    .clear-done {
+      display: none;
+      font-size: 11px;
+      color: var(--text-dim);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font);
+      padding: 0;
+      transition: color 0.15s;
+    }
+
+    .clear-done.visible {
+      display: inline;
+    }
+
+    .clear-done:hover {
+      color: #ff5f5f;
+    }
+
+    /* ── TOAST ── */
     #toast {
       position: fixed;
       bottom: 30px;
@@ -393,6 +522,7 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    /* ── MODAL ── */
     #modal-overlay {
       display: none;
       position: fixed;
@@ -420,7 +550,7 @@
     #modal h2 {
       font-size: 14px;
       font-weight: 500;
-      color: var(--accent);
+      color: var(--green);
       margin-bottom: 14px;
       letter-spacing: 0.05em;
     }
@@ -433,7 +563,7 @@
       margin-bottom: 10px;
     }
 
-    #modal input {
+    #modal textarea {
       width: 100%;
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -444,11 +574,12 @@
       padding: 10px 12px;
       outline: none;
       margin: 8px 0 16px;
+      resize: none;
+      line-height: 1.7;
     }
 
-    #modal input:focus,
     #modal textarea:focus {
-      border-color: var(--accent);
+      border-color: var(--green);
     }
 
     .modal-btns {
@@ -478,7 +609,7 @@
     }
 
     #modal-save {
-      background: var(--accent);
+      background: var(--green);
       border: none;
       color: #0f0f0f;
       font-weight: 500;
@@ -487,58 +618,78 @@
     #modal-save:hover {
       opacity: 0.85;
     }
-
-    #clear-done {
-      display: none;
-      font-size: 11px;
-      color: var(--text-dim);
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-family: var(--font);
-      padding: 0;
-      transition: color 0.15s;
-    }
-
-    #clear-done.visible {
-      display: inline;
-    }
-
-    #clear-done:hover {
-      color: #ff5f5f;
-    }
   </style>
 </head>
 
 <body>
-  <div id="app">
-    <header>
-      <div class="header-left">
-        <h1>СПИСОК</h1>
-        <span id="item-count"></span>
-      </div>
-      <div class="header-actions">
-        <button id="clear-done" title="Удалить отмеченные">✕ отмеч</button>
-        <button id="sync-btn" class="icon-btn" title="Синхронизация с GitHub Gist">⇅ Gist</button>
-        <button id="settings-btn" class="icon-btn" title="Настройки">⚙</button>
-      </div>
-    </header>
+  <div id="swipe-dots">
+    <div class="dot green active" id="dot-green"></div>
+    <div class="dot blue" id="dot-blue"></div>
+  </div>
 
-    <div id="list-container">
-      <div id="list-active"></div>
-      <div id="new-item-row" onclick="document.getElementById('new-item').focus()">
-        <span class="plus">+</span>
-        <input id="new-item" type="text" placeholder="добавить..." autocomplete="off" autocorrect="off"
-          spellcheck="false">
+  <div id="app">
+    <div id="swipe-container">
+
+      <!-- GREEN LIST -->
+      <div class="list-panel green-panel" id="panel-green">
+        <div class="panel-header">
+          <div class="header-left">
+            <span class="panel-title">СПИСОК</span>
+            <span class="item-count" id="count-green"></span>
+          </div>
+          <div class="header-actions">
+            <button class="clear-done icon-btn" id="clear-green" title="Удалить отмеченные">✕ отмеч</button>
+            <button class="sync-btn icon-btn" id="sync-btn" title="Синхронизация">⇅ Gist</button>
+            <button class="icon-btn" id="settings-btn" title="Настройки">⚙</button>
+          </div>
+        </div>
+        <div class="list-container" id="container-green">
+          <div class="list-active" id="active-green"></div>
+          <div class="new-item-row" onclick="document.getElementById('input-green').focus()">
+            <span class="plus">+</span>
+            <input class="new-item-input" id="input-green" type="text" placeholder="добавить..." autocomplete="off"
+              autocorrect="off" spellcheck="false">
+          </div>
+          <div class="divider" id="divider-green">
+            <div class="divider-line"></div>
+          </div>
+          <div class="list-done" id="done-green"></div>
+          <div class="empty-state" id="empty-green">
+            <div class="big">📋</div>
+            <div>список пуст</div>
+          </div>
+        </div>
       </div>
-      <div class="divider" id="divider">
-        <div class="divider-line"></div>
+
+      <!-- BLUE LIST -->
+      <div class="list-panel blue-panel" id="panel-blue">
+        <div class="panel-header">
+          <div class="header-left">
+            <span class="panel-title">СПИСОК</span>
+            <span class="item-count" id="count-blue"></span>
+          </div>
+          <div class="header-actions">
+            <button class="clear-done icon-btn" id="clear-blue" title="Удалить отмеченные">✕ отмеч</button>
+          </div>
+        </div>
+        <div class="list-container" id="container-blue">
+          <div class="list-active" id="active-blue"></div>
+          <div class="new-item-row" onclick="document.getElementById('input-blue').focus()">
+            <span class="plus">+</span>
+            <input class="new-item-input" id="input-blue" type="text" placeholder="добавить..." autocomplete="off"
+              autocorrect="off" spellcheck="false">
+          </div>
+          <div class="divider" id="divider-blue">
+            <div class="divider-line"></div>
+          </div>
+          <div class="list-done" id="done-blue"></div>
+          <div class="empty-state" id="empty-blue">
+            <div class="big">📋</div>
+            <div>список пуст</div>
+          </div>
+        </div>
       </div>
-      <div id="list-done"></div>
-      <div id="empty">
-        <div class="big">📋</div>
-        <div>список пуст</div>
-      </div>
+
     </div>
   </div>
 
@@ -548,11 +699,9 @@
     <div id="modal">
       <h2>НАСТРОЙКИ СИНХРОНИЗАЦИИ</h2>
       <p>Вставь три строки:</p>
-      <p><small style="color:var(--text-dim)">строка 1 — GitHub Token (github.com/settings/tokens → classic →
-          gist)<br>строка 2 — Gist ID (из адресной строки gist.github.com)<br>строка 3 — имя файла (например
-          x7k2m9p4.json)</small></p>
-      <textarea id="input-config" placeholder="ghp_токен&#10;gist_id&#10;filename.json" rows="3"
-        style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:12px;padding:10px 12px;outline:none;margin:8px 0 16px;resize:none;line-height:1.7"></textarea>
+      <p><small style="color:var(--text-dim)">строка 1 — GitHub Token<br>строка 2 — Gist ID<br>строка 3 — имя файла
+          (например x7k2m9p4.json)</small></p>
+      <textarea id="input-config" placeholder="ghp_токен&#10;gist_id&#10;filename.json" rows="3"></textarea>
       <div class="modal-btns">
         <button id="modal-cancel">Отмена</button>
         <button id="modal-save">Сохранить</button>
@@ -561,65 +710,81 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'list_v1';
+    // ── CONSTANTS ──
     const TOKEN_KEY = 'gist_token';
     const GIST_ID_KEY = 'gist_id';
     const FILE_KEY = 'gist_file';
-
-    let items = [];
-    let listUpdatedAt = 0;
-    let saveTimer = null;
-    let isDirty = false;
+    const STORAGE_KEY = 'list_v2';
 
     function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
     function getGistId() { return localStorage.getItem(GIST_ID_KEY) || ''; }
     function getFileName() { return localStorage.getItem(FILE_KEY) || ''; }
 
-    // ─── ORDER ────────────────────────────────────────────────────────────────────
-    function maxOrder() {
+    // ── STATE ──
+    // lists['green'] = { items: [], listUpdatedAt: 0 }
+    const lists = {
+      green: { items: [], listUpdatedAt: 0 },
+      blue: { items: [], listUpdatedAt: 0 }
+    };
+
+    let saveTimer = null;
+    let isDirty = false;
+    let isSyncing = false;
+    let sortables = {};
+
+    // ── ORDER ──
+    function maxOrder(color) {
+      const items = lists[color].items;
       return items.length ? Math.max(...items.map(i => i.order ?? 0)) : 0;
     }
 
-    function ensureOrder() {
-      items.forEach((item, idx) => {
+    function ensureOrder(color) {
+      lists[color].items.forEach((item, idx) => {
         if (item.order === undefined) item.order = idx * 10;
       });
     }
 
-    // ─── LOCAL STORAGE ────────────────────────────────────────────────────────────
+    // ── LOCAL STORAGE ──
     function loadLocal() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          items = parsed.items || [];
-          listUpdatedAt = parsed.listUpdatedAt || 0;
-          ensureOrder();
+          for (const color of ['green', 'blue']) {
+            if (parsed[color]) {
+              lists[color].items = parsed[color].items || [];
+              lists[color].listUpdatedAt = parsed[color].listUpdatedAt || 0;
+              ensureOrder(color);
+            }
+          }
         }
-      } catch (e) { items = []; listUpdatedAt = 0; }
+      } catch (e) { }
     }
 
     function saveLocal() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, listUpdatedAt }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
     }
 
-    // ─── RENDER ───────────────────────────────────────────────────────────────────
-    function render() {
-      const active = items.filter(i => !i.done).sort((a, b) => a.order - b.order);
-      const done = items.filter(i => i.done).sort((a, b) => a.order - b.order);
+    // ── RENDER ──
+    function render(color) {
+      const l = lists[color];
+      const active = l.items.filter(i => !i.done).sort((a, b) => a.order - b.order);
+      const done = l.items.filter(i => i.done).sort((a, b) => a.order - b.order);
 
-      renderSection('list-active', active);
-      renderSection('list-done', done);
+      renderSection(`active-${color}`, active, color);
+      renderSection(`done-${color}`, done, color);
 
-      document.getElementById('divider').classList.toggle('visible', done.length > 0);
-      document.getElementById('empty').classList.toggle('visible', items.length === 0);
+      document.getElementById(`divider-${color}`).classList.toggle('visible', done.length > 0);
+      document.getElementById(`empty-${color}`).classList.toggle('visible', l.items.length === 0);
 
-      updateCount();
-      updateClearBtn();
-      initSortable();
+      const total = l.items.length, doneCount = done.length;
+      document.getElementById(`count-${color}`).textContent = total ? `${doneCount}/${total}` : '';
+      document.getElementById(`clear-${color}`).classList.toggle('visible', done.length > 0);
+
+      initSortable(color);
     }
 
-    function renderSection(containerId, sectionItems) {
+    function renderSection(containerId, sectionItems, color) {
       const container = document.getElementById(containerId);
       container.innerHTML = '';
       sectionItems.forEach(item => {
@@ -627,21 +792,18 @@
         el.className = 'item' + (item.done ? ' done' : '');
         el.dataset.id = item.id;
         el.innerHTML = `
-          <div class="drag-handle">⋮⋮</div>
-          <div class="check" data-check></div>
-          <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
-          <button class="del-btn" title="Удалить">×</button>
-        `;
-        el.querySelector('[data-check]').addEventListener('click', () => toggleDone(item.id));
-        el.querySelector('.del-btn').addEventListener('click', () => deleteItem(item.id));
+        <div class="drag-handle">⋮⋮</div>
+        <div class="check" data-check></div>
+        <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
+        <button class="del-btn" title="Удалить">×</button>
+      `;
+        el.querySelector('[data-check]').addEventListener('click', () => toggleDone(color, item.id));
+        el.querySelector('.del-btn').addEventListener('click', () => deleteItem(color, item.id));
         const textEl = el.querySelector('.item-text');
         textEl.addEventListener('blur', () => {
           const newText = textEl.textContent.trim();
-          if (newText && newText !== item.text) {
-            item.text = newText;
-            scheduleSave();
-          }
-          else if (!newText) deleteItem(item.id);
+          if (newText && newText !== item.text) { item.text = newText; scheduleSave(); }
+          else if (!newText) deleteItem(color, item.id);
         });
         textEl.addEventListener('keydown', e => {
           if (e.key === 'Enter') { e.preventDefault(); textEl.blur(); }
@@ -654,43 +816,37 @@
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    function updateCount() {
-      const total = items.length;
-      const done = items.filter(i => i.done).length;
-      document.getElementById('item-count').textContent = total ? `${done}/${total}` : '';
-    }
+    function renderAll() { render('green'); render('blue'); }
 
-    function updateClearBtn() {
-      document.getElementById('clear-done').classList.toggle('visible', items.some(i => i.done));
-    }
-
-    // ─── ACTIONS ──────────────────────────────────────────────────────────────────
-    function addItem(text) {
+    // ── ACTIONS ──
+    function addItem(color, text) {
       if (!text.trim()) return;
-      items.push({ id: Date.now().toString(), text: text.trim(), done: false, order: maxOrder() + 10 });
+      lists[color].items.push({ id: Date.now().toString(), text: text.trim(), done: false, order: maxOrder(color) + 10 });
       scheduleSave();
-      render();
+      render(color);
     }
 
-    function toggleDone(id) {
-      const item = items.find(i => i.id === id);
-      if (item) { item.done = !item.done; scheduleSave(); render(); }
+    function toggleDone(color, id) {
+      const item = lists[color].items.find(i => i.id === id);
+      if (item) { item.done = !item.done; scheduleSave(); render(color); }
     }
 
-    function deleteItem(id) {
-      items = items.filter(i => i.id !== id);
+    function deleteItem(color, id) {
+      lists[color].items = lists[color].items.filter(i => i.id !== id);
       scheduleSave();
-      render();
+      render(color);
     }
 
-    function clearDone() {
-      items = items.filter(i => !i.done);
+    function clearDone(color) {
+      lists[color].items = lists[color].items.filter(i => !i.done);
       scheduleSave();
-      render();
+      render(color);
     }
 
     function scheduleSave() {
-      listUpdatedAt = Date.now();
+      const now = Date.now();
+      lists.green.listUpdatedAt = now;
+      lists.blue.listUpdatedAt = now;
       saveLocal();
       isDirty = true;
       clearTimeout(saveTimer);
@@ -699,52 +855,42 @@
       }, 2000);
     }
 
-    // ─── SORTABLE ─────────────────────────────────────────────────────────────────
-    let sortableActive = null;
-    let sortableDone = null;
-
-    function initSortable() {
-      if (sortableActive) { sortableActive.destroy(); sortableActive = null; }
-      if (sortableDone) { sortableDone.destroy(); sortableDone = null; }
-      if (!window.Sortable) return;
-
-      function makeOpts(doneSection) {
-        return {
+    // ── SORTABLE ──
+    function initSortable(color) {
+      ['active', 'done'].forEach(section => {
+        const key = `${section}-${color}`;
+        if (sortables[key]) { sortables[key].destroy(); delete sortables[key]; }
+        const el = document.getElementById(key);
+        if (!window.Sortable || el.children.length === 0) return;
+        const isDoneSection = section === 'done';
+        sortables[key] = Sortable.create(el, {
           handle: '.drag-handle',
           animation: 120,
-          ghostClass: 'dragging',
-          chosenClass: 'drag-over',
+          ghostClass: 'sortable-ghost',
+          chosenClass: 'sortable-chosen',
           onEnd(evt) {
             const { oldIndex, newIndex } = evt;
             if (oldIndex === newIndex) return;
-            const section = items.filter(i => i.done === doneSection).sort((a, b) => a.order - b.order);
-            const moved = section[oldIndex];
+            const sec = lists[color].items.filter(i => i.done === isDoneSection).sort((a, b) => a.order - b.order);
+            const moved = sec[oldIndex];
             if (!moved) return;
-            section.splice(oldIndex, 1);
-            section.splice(newIndex, 0, moved);
-            section.forEach((item, idx) => { item.order = (idx + 1) * 10; });
+            sec.splice(oldIndex, 1);
+            sec.splice(newIndex, 0, moved);
+            sec.forEach((item, idx) => { item.order = (idx + 1) * 10; });
             scheduleSave();
-            render();
+            render(color);
           }
-        };
-      }
-
-      const activeEl = document.getElementById('list-active');
-      const doneEl = document.getElementById('list-done');
-      if (activeEl.children.length > 0) sortableActive = Sortable.create(activeEl, makeOpts(false));
-      if (doneEl.children.length > 0) sortableDone = Sortable.create(doneEl, makeOpts(true));
+        });
+      });
     }
 
-    // ─── MERGE ────────────────────────────────────────────────────────────────────
-    // ─── GIST SYNC ────────────────────────────────────────────────────────────────
-    let isSyncing = false;
-
+    // ── SYNC ──
     function updateSyncBtn(state) {
       const btn = document.getElementById('sync-btn');
       btn.classList.remove('active', 'syncing');
-      if (state === 'connected') { btn.textContent = '✓ Gist'; btn.classList.add('active'); btn.title = 'Синхронизировано'; }
-      else if (state === 'syncing') { btn.textContent = '⇅ Gist'; btn.classList.add('active', 'syncing'); btn.title = 'Синхронизация...'; }
-      else { btn.textContent = '⇅ Sync'; btn.title = 'Настроить синхронизацию'; }
+      if (state === 'connected') { btn.textContent = '✓ Gist'; btn.classList.add('active'); }
+      else if (state === 'syncing') { btn.textContent = '⇅ Gist'; btn.classList.add('syncing'); }
+      else { btn.textContent = '⇅ Sync'; }
     }
 
     async function sync() {
@@ -754,42 +900,43 @@
       isSyncing = true;
       updateSyncBtn('syncing');
       try {
-        // 1. Скачать remote
         const res = await fetch(`https://api.github.com/gists/${gistId}?t=${Date.now()}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) {
           const err = await res.json();
           toast(`Ошибка ${res.status}: ${err.message}`);
-          updateSyncBtn('');
-          return;
+          updateSyncBtn(''); return;
         }
         const data = await res.json();
         const content = data.files?.[fileName]?.content;
         let shouldUpload = isDirty;
+
         if (content) {
           let remote;
           try { remote = JSON.parse(content); } catch (e) { toast('Ошибка формата данных'); updateSyncBtn(''); return; }
-          // Побеждает тот у кого listUpdatedAt новее
-          const remoteUpdatedAt = remote.listUpdatedAt ?? 0;
-          if (remoteUpdatedAt > listUpdatedAt) {
-            // Remote новее — берём remote полностью
-            items = remote.items || [];
-            listUpdatedAt = remoteUpdatedAt;
-            ensureOrder();
-            saveLocal();
-            render();
-            shouldUpload = false; // remote уже актуален, не нужно перезаписывать
-          } else if (isDirty) {
-            shouldUpload = true; // локальный новее — загрузим
+
+          let changed = false;
+          for (const color of ['green', 'blue']) {
+            const rem = remote[color];
+            if (!rem) continue;
+            const remoteTs = rem.listUpdatedAt ?? 0;
+            const localTs = lists[color].listUpdatedAt ?? 0;
+            if (remoteTs > localTs) {
+              lists[color].items = rem.items || [];
+              lists[color].listUpdatedAt = remoteTs;
+              ensureOrder(color);
+              changed = true;
+            }
           }
+          if (changed) { saveLocal(); renderAll(); shouldUpload = isDirty; }
         }
-        // 2. Загрузить локальный если он новее
+
         if (shouldUpload) {
           await fetch(`https://api.github.com/gists/${gistId}`, {
             method: 'PATCH',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ files: { [fileName]: { content: JSON.stringify({ items, listUpdatedAt }) } } })
+            body: JSON.stringify({ files: { [fileName]: { content: JSON.stringify(lists) } } })
           });
           isDirty = false;
         }
@@ -802,12 +949,35 @@
       }
     }
 
-    async function handleSyncClick() {
-      if (!getToken() || !getGistId() || !getFileName()) { showModal(); return; }
-      await sync();
+    // ── SWIPE ──
+    let swipeStartX = 0, swipeStartY = 0, currentTab = 'green';
+
+    function switchTab(color) {
+      currentTab = color;
+      const container = document.getElementById('swipe-container');
+      container.classList.toggle('show-blue', color === 'blue');
+      document.getElementById('dot-green').classList.toggle('active', color === 'green');
+      document.getElementById('dot-blue').classList.toggle('active', color === 'blue');
     }
 
-    // ─── MODAL ────────────────────────────────────────────────────────────────────
+    const swipeEl = document.getElementById('swipe-container');
+
+    swipeEl.addEventListener('touchstart', e => {
+      swipeStartX = e.touches[0].clientX;
+      swipeStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    swipeEl.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - swipeStartX;
+      const dy = e.changedTouches[0].clientY - swipeStartY;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+        if (dx < 0 && currentTab === 'green') switchTab('blue');
+        else if (dx > 0 && currentTab === 'blue') switchTab('green');
+      }
+    }, { passive: true });
+
+
+    // ── MODAL ──
     function showModal() {
       const cfg = [getToken(), getGistId(), getFileName()].filter(Boolean).join('\n');
       document.getElementById('input-config').value = cfg;
@@ -833,7 +1003,7 @@
       if (e.target === e.currentTarget) e.currentTarget.classList.remove('show');
     });
 
-    // ─── TOAST ────────────────────────────────────────────────────────────────────
+    // ── TOAST ──
     let toastTimer;
     function toast(msg) {
       const el = document.getElementById('toast');
@@ -843,43 +1013,39 @@
       toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
     }
 
-    // ─── INIT ─────────────────────────────────────────────────────────────────────
+    // ── INIT ──
     loadLocal();
-    render();
+    renderAll();
 
-    if (getToken() && getGistId()) {
-      updateSyncBtn('syncing');
-      sync();
-    }
+    if (getToken() && getGistId()) { updateSyncBtn('syncing'); sync(); }
 
-    document.getElementById('new-item').addEventListener('keydown', e => {
-      if (e.key === 'Enter') { addItem(e.target.value); e.target.value = ''; }
+    document.getElementById('input-green').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { addItem('green', e.target.value); e.target.value = ''; }
+    });
+    document.getElementById('input-blue').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { addItem('blue', e.target.value); e.target.value = ''; }
     });
 
-    document.getElementById('sync-btn').addEventListener('click', handleSyncClick);
+    document.getElementById('sync-btn').addEventListener('click', () => {
+      if (!getToken() || !getGistId() || !getFileName()) { showModal(); return; }
+      sync();
+    });
     document.getElementById('settings-btn').addEventListener('click', showModal);
-    document.getElementById('clear-done').addEventListener('click', clearDone);
+    document.getElementById('clear-green').addEventListener('click', () => clearDone('green'));
+    document.getElementById('clear-blue').addEventListener('click', () => clearDone('blue'));
 
-    setInterval(() => {
-      if (getToken() && getGistId()) sync();
-    }, 60000);
-
+    setInterval(() => { if (getToken() && getGistId()) sync(); }, 60000);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && getToken() && getGistId()) sync();
     });
-    window.addEventListener('online', () => {
-      if (getToken() && getGistId()) sync();
-    });
+    window.addEventListener('online', () => { if (getToken() && getGistId()) sync(); });
 
     const sortableScript = document.createElement('script');
     sortableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js';
-    sortableScript.onload = () => initSortable();
+    sortableScript.onload = () => renderAll();
     document.head.appendChild(sortableScript);
 
-    // Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/list/sw.js');
-    }
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/list/sw.js');
   </script>
 </body>
 
