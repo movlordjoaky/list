@@ -117,6 +117,7 @@
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
       gap: 12px;
+      min-height: 65px;
     }
 
     .header-left {
@@ -207,8 +208,6 @@
       }
     }
 
-
-
     /* ── LIST ── */
     .list-container {
       flex: 1;
@@ -254,7 +253,7 @@
       cursor: default;
       transition: background 0.15s, border-color 0.15s, opacity 0.2s;
       user-select: none;
-      touch-action: none;
+      touch-action: pan-y;
       position: relative;
     }
 
@@ -285,7 +284,7 @@
       cursor: grab;
       font-size: 15px;
       flex-shrink: 0;
-      padding: 2px 0;
+      padding: 2px 4px;
       line-height: 1;
       touch-action: none;
     }
@@ -690,7 +689,6 @@
     function getFileName() { return localStorage.getItem(FILE_KEY) || ''; }
 
     // ── STATE ──
-    // lists['green'] = { items: [], listUpdatedAt: 0 }
     const lists = {
       green: { items: [], listUpdatedAt: 0 },
       blue: { items: [], listUpdatedAt: 0 }
@@ -761,11 +759,11 @@
         el.className = 'item' + (item.done ? ' done' : '');
         el.dataset.id = item.id;
         el.innerHTML = `
-        <div class="drag-handle">⋮⋮</div>
-        <div class="check" data-check></div>
-        <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
-        <button class="del-btn" title="Удалить">×</button>
-      `;
+          <div class="drag-handle">⋮⋮</div>
+          <div class="check" data-check></div>
+          <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
+          <button class="del-btn" title="Удалить">×</button>
+        `;
         el.querySelector('[data-check]').addEventListener('click', () => toggleDone(color, item.id));
         el.querySelector('.del-btn').addEventListener('click', () => deleteItem(color, item.id));
         const textEl = el.querySelector('.item-text');
@@ -837,6 +835,7 @@
           animation: 120,
           ghostClass: 'sortable-ghost',
           chosenClass: 'sortable-chosen',
+          forceFallback: true,
           onEnd(evt) {
             const { oldIndex, newIndex } = evt;
             if (oldIndex === newIndex) return;
@@ -939,10 +938,10 @@
       const dx = e.changedTouches[0].clientX - swipeStartX;
       const dy = e.changedTouches[0].clientY - swipeStartY;
       if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-        switchTab(currentTab === 'green' ? 'blue' : 'green');
+        if (dx < 0 && currentTab === 'green') switchTab('blue');
+        else if (dx > 0 && currentTab === 'blue') switchTab('green');
       }
     }, { passive: true });
-
 
     // ── MODAL ──
     function showModal() {
