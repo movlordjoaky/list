@@ -386,6 +386,40 @@
       color: #ff5f5f;
     }
 
+    .move-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+      flex-shrink: 0;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .item:hover .move-btn {
+      opacity: 1;
+    }
+
+    .move-btn svg {
+      display: block;
+    }
+
+    .green-panel .move-btn svg {
+      fill: none;
+      stroke: var(--blue);
+      stroke-width: 1.5;
+    }
+
+    .blue-panel .move-btn svg {
+      fill: none;
+      stroke: var(--green);
+      stroke-width: 1.5;
+    }
+
     .empty-state {
       display: none;
       flex-direction: column;
@@ -771,14 +805,18 @@
         const el = document.createElement('div');
         el.className = 'item' + (item.done ? ' done' : '');
         el.dataset.id = item.id;
+        const arrowRight = `<svg width="14" height="14" viewBox="0 0 14 14"><polyline points="4,2 10,7 4,12"/></svg>`;
+        const arrowLeft = `<svg width="14" height="14" viewBox="0 0 14 14"><polyline points="10,2 4,7 10,12"/></svg>`;
         el.innerHTML = `
         <div class="drag-handle">⋮⋮</div>
         <div class="check" data-check></div>
         <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
         <button class="del-btn" title="Удалить">×</button>
+        <button class="move-btn" title="Переместить в другой список">${color === 'green' ? arrowRight : arrowLeft}</button>
       `;
         el.querySelector('[data-check]').addEventListener('click', () => toggleDone(color, item.id));
         el.querySelector('.del-btn').addEventListener('click', () => deleteItem(color, item.id));
+        el.querySelector('.move-btn').addEventListener('click', () => moveItem(color, item.id));
         const textEl = el.querySelector('.item-text');
         textEl.addEventListener('blur', () => {
           const t = textEl.textContent.trim();
@@ -810,6 +848,27 @@
     function deleteItem(color, id) {
       lists[color].items = lists[color].items.filter(i => i.id !== id);
       scheduleSave(); render(color);
+    }
+    function moveItem(fromColor, id) {
+      const toColor = fromColor === 'green' ? 'blue' : 'green';
+      const idx = lists[fromColor].items.findIndex(i => i.id === id);
+      if (idx === -1) return;
+      const [item] = lists[fromColor].items.splice(idx, 1);
+      item.done = false; // сбрасываем галочку при перемещении
+      if (fromColor === 'green') {
+        // зелёный → синий: в начало (минимальный order - 10)
+        const minOrder = lists[toColor].items.length
+          ? Math.min(...lists[toColor].items.map(i => i.order ?? 0))
+          : 10;
+        item.order = minOrder - 10;
+      } else {
+        // синий → зелёный: в конец (максимальный order + 10)
+        item.order = maxOrder(toColor) + 10;
+      }
+      lists[toColor].items.push(item);
+      scheduleSave();
+      render(fromColor);
+      render(toColor);
     }
     function clearDone(color) {
       lists[color].items = lists[color].items.filter(i => !i.done);
