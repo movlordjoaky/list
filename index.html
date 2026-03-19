@@ -820,13 +820,20 @@
         const textEl = el.querySelector('.item-text');
         textEl.addEventListener('blur', () => {
           const t = textEl.textContent.trim();
-          if (t && t !== item.text) { item.text = t; scheduleSave(); }
-          else if (!t) deleteItem(color, item.id);
+          if (!t) { deleteItem(color, item.id); return; }
+          if (t !== item.text) { item.text = t; scheduleSave(); }
+          // Always update DOM to trimmed value
+          if (textEl.textContent !== t) textEl.textContent = t;
         });
         textEl.addEventListener('keydown', e => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            textEl.blur();
+            // Trim and save current item before creating new
+            const t = textEl.textContent.trim();
+            if (!t) { deleteItem(color, item.id); return; }
+            if (t !== item.text) { item.text = t; }
+            if (textEl.textContent !== t) textEl.textContent = t;
+            scheduleSave();
             // Insert new item after current
             const sectionItems = lists[color].items
               .filter(i => i.done === item.done)
@@ -838,7 +845,6 @@
               : item.order + 10;
             const newId = Date.now().toString();
             lists[color].items.push({ id: newId, text: '', done: item.done, order: newOrder });
-            scheduleSave();
             render(color);
             // Focus new item
             setTimeout(() => {
@@ -1090,11 +1096,66 @@
 
     if (getToken() && getGistId()) { updateSyncBtn('syncing'); sync(); }
 
-    document.getElementById('input-green').addEventListener('keydown', e => {
-      if (e.key === 'Enter') { addItem('green', e.target.value); e.target.value = ''; }
-    });
-    document.getElementById('input-blue').addEventListener('keydown', e => {
-      if (e.key === 'Enter') { addItem('blue', e.target.value); e.target.value = ''; }
+    function setupBottomInput(id, color) {
+      const input = document.getElementById(id);
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { addItem(color, input.value); input.value = ''; }
+      });
+      input.addEventListener('blur', () => {
+        if (input.value.trim()) { addItem(color, input.value.trim()); input.value = ''; }
+      });
+    }
+    setupBottomInput('input-green', 'green');
+    setupBottomInput('input-blue', 'blue');
+
+    // Arrow key navigation between items
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      const active = document.activeElement;
+      if (!active || !active.classList.contains('item-text')) return;
+
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+
+      // Find all item-text elements in the same panel
+      const panel = active.closest('.list-panel');
+      if (!panel) return;
+      const allTexts = Array.from(panel.querySelectorAll('.item-text'));
+      const idx = allTexts.indexOf(active);
+
+      if (e.key === 'ArrowUp' && idx > 0) {
+        // Check if cursor is on the first line of this element
+        const elRect = active.getBoundingClientRect();
+        const lineHeight = parseFloat(getComputedStyle(active).lineHeight) || 20;
+        if (rect.top - elRect.top < lineHeight) {
+          e.preventDefault();
+          const prev = allTexts[idx - 1];
+          prev.focus();
+          // Move cursor to end of previous element
+          const r = document.createRange();
+          r.selectNodeContents(prev);
+          r.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(r);
+        }
+      } else if (e.key === 'ArrowDown' && idx < allTexts.length - 1) {
+        // Check if cursor is on the last line of this element
+        const elRect = active.getBoundingClientRect();
+        const lineHeight = parseFloat(getComputedStyle(active).lineHeight) || 20;
+        if (elRect.bottom - rect.bottom < lineHeight) {
+          e.preventDefault();
+          const next = allTexts[idx + 1];
+          next.focus();
+          // Move cursor to start of next element
+          const r = document.createRange();
+          r.selectNodeContents(next);
+          r.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(r);
+        }
+      }
     });
 
     document.getElementById('sync-btn').addEventListener('click', () => {
