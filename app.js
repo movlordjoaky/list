@@ -64,8 +64,10 @@ function render(color) {
     document.getElementById(`empty-${color}`).classList.toggle('visible', l.items.length === 0);
 
     const total = l.items.length;
-    document.getElementById(`count-${color}`).textContent = `${done.length}/${total}`;
+    document.getElementById(`count-${color}`).textContent = total ? `${done.length}/${total}` : '';
     document.getElementById(`clear-${color}`).classList.toggle('visible', done.length > 0);
+    const deskClear = document.getElementById(`clear-${color}-d`);
+    if (deskClear) deskClear.classList.toggle('visible', done.length > 0);
 
     initSortable(color);
 }
@@ -324,8 +326,9 @@ document.getElementById('swipe-container').addEventListener('touchend', e => {
 
 // ── SYNC ──
 function updateSyncBtn(state) {
-    ['sync-btn', 'sync-btn-blue'].forEach(id => {
+    ['sync-btn', 'sync-btn-m'].forEach(id => {
         const btn = document.getElementById(id);
+        if (!btn) return;
         btn.classList.remove('active', 'syncing');
         if (state === 'connected') { btn.textContent = '✓ Gist'; btn.classList.add('active'); }
         else if (state === 'syncing') { btn.textContent = '⇅ Gist'; btn.classList.add('syncing'); }
@@ -495,16 +498,20 @@ document.addEventListener('keydown', e => {
     }
 });
 
+// Desktop buttons
 document.getElementById('sync-btn').addEventListener('click', () => {
     if (!getToken() || !getGistId() || !getFileName()) { showModal(); return; }
     sync();
 });
-document.getElementById('sync-btn-blue').addEventListener('click', () => {
+document.getElementById('settings-btn').addEventListener('click', showModal);
+document.getElementById('clear-green-d').addEventListener('click', () => clearDone('green'));
+document.getElementById('clear-blue-d').addEventListener('click', () => clearDone('blue'));
+// Mobile buttons
+document.getElementById('sync-btn-m').addEventListener('click', () => {
     if (!getToken() || !getGistId() || !getFileName()) { showModal(); return; }
     sync();
 });
-document.getElementById('settings-btn').addEventListener('click', showModal);
-document.getElementById('settings-btn-blue').addEventListener('click', showModal);
+document.getElementById('settings-btn-m').addEventListener('click', showModal);
 document.getElementById('clear-green').addEventListener('click', () => clearDone('green'));
 document.getElementById('clear-blue').addEventListener('click', () => clearDone('blue'));
 
@@ -515,14 +522,47 @@ window.addEventListener('online', () => { if (getToken() && getGistId()) sync();
 window.addEventListener('focus', () => { if (getToken() && getGistId()) sync(); });
 
 // Android back button — exit edit mode
+function isEditableField(el) {
+    if (!el) return false;
+    return el.classList.contains('item-text') ||
+        el.classList.contains('new-item-input') ||
+        el.id === 'input-config';
+}
+
+let editingHistoryPushed = false;
+
 document.addEventListener('focusin', e => {
-    if (e.target.classList.contains('item-text')) {
+    if (isEditableField(e.target) && !editingHistoryPushed) {
         history.pushState({ editing: true }, '');
+        editingHistoryPushed = true;
     }
 });
-window.addEventListener('popstate', () => {
-    if (document.activeElement?.classList.contains('item-text')) {
-        document.activeElement.blur();
+
+document.addEventListener('focusout', e => {
+    if (isEditableField(e.target)) {
+        editingHistoryPushed = false;
+    }
+});
+
+if (window.visualViewport) {
+    let lastViewportHeight = window.visualViewport.height;
+    window.visualViewport.addEventListener('resize', () => {
+        const newHeight = window.visualViewport.height;
+        const keyboardHidden = newHeight > lastViewportHeight + 100;
+        lastViewportHeight = newHeight;
+        if (keyboardHidden && isEditableField(document.activeElement)) {
+            document.activeElement.blur();
+        }
+    });
+}
+
+window.addEventListener('popstate', e => {
+    if (e.state?.editing) {
+        const active = document.activeElement;
+        if (isEditableField(active)) {
+            active.blur();
+        }
+        editingHistoryPushed = false;
     }
 });
 
