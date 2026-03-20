@@ -75,7 +75,6 @@ function renderSection(containerId, sectionItems, color) {
     container.innerHTML = '';
     sectionItems.forEach(item => {
         const el = document.createElement('div');
-        el.querySelector('.item-text').setAttribute('tabindex', '0');
         el.className = 'item' + (item.done ? ' done' : '');
         el.dataset.id = item.id;
         const arrowRight = `<svg width="14" height="14" viewBox="0 0 14 14"><polyline points="4,2 10,7 4,12"/></svg>`;
@@ -86,7 +85,8 @@ function renderSection(containerId, sectionItems, color) {
         <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
         <button class="del-btn" title="Удалить">×</button>
         <button class="move-btn" title="Переместить в другой список">${color === 'green' ? arrowRight : arrowLeft}</button>
-      `;
+        `;
+        el.querySelector('.item-text').setAttribute('tabindex', '0');
         el.querySelector('.drag-handle').addEventListener('mousedown', () => {
             // Disable all contenteditable in this list during drag
             document.querySelectorAll('.item-text').forEach(t => t.contentEditable = 'false');
