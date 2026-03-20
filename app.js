@@ -326,7 +326,7 @@ document.getElementById('swipe-container').addEventListener('touchend', e => {
 
 // ── SYNC ──
 function updateSyncBtn(state) {
-    ['sync-btn', 'sync-btn-m'].forEach(id => {
+    ['sync-btn', 'sync-btn-m', 'sync-btn-blue'].forEach(id => {
         const btn = document.getElementById(id);
         if (!btn) return;
         btn.classList.remove('active', 'syncing');
