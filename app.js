@@ -75,6 +75,7 @@ function renderSection(containerId, sectionItems, color) {
     container.innerHTML = '';
     sectionItems.forEach(item => {
         const el = document.createElement('div');
+        el.querySelector('.item-text').setAttribute('tabindex', '0');
         el.className = 'item' + (item.done ? ' done' : '');
         el.dataset.id = item.id;
         const arrowRight = `<svg width="14" height="14" viewBox="0 0 14 14"><polyline points="4,2 10,7 4,12"/></svg>`;
