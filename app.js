@@ -208,6 +208,7 @@ function initSortable(color) {
         if (!window.Sortable || el.children.length === 0) return;
         const isDoneSection = section === 'done';
         const isDesktop = window.matchMedia('(min-width: 1081px)').matches;
+        const otherColor = color === 'green' ? 'blue' : 'green';
         sortables[key] = Sortable.create(el, {
             handle: '.drag-handle',
             animation: 120,
@@ -215,21 +216,51 @@ function initSortable(color) {
             chosenClass: 'sortable-chosen',
             forceFallback: true,
             fallbackTolerance: isDesktop ? 3 : 0,
+            group: isDesktop ? `list-${section}` : key,
             onStart(evt) {
-                // Disable contenteditable on all items to prevent text selection during drag
-                el.querySelectorAll('[contenteditable]').forEach(node => {
+                document.querySelectorAll('.item-text').forEach(node => {
                     node.dataset.wasEditable = node.contentEditable;
                     node.contentEditable = 'false';
                 });
             },
+            onAdd(evt) {
+                // Item dragged from another list into this one
+                const itemEl = evt.item;
+                const itemId = itemEl.dataset.id;
+                const newIndex = evt.newIndex;
+
+                // Find which color it came from
+                const fromColor = otherColor;
+                const fromIdx = lists[fromColor].items.findIndex(i => i.id === itemId);
+                if (fromIdx === -1) { renderAll(); return; }
+
+                const [item] = lists[fromColor].items.splice(fromIdx, 1);
+                item.done = isDoneSection;
+
+                // Calculate order based on drop position
+                const sectionItems = lists[color].items
+                    .filter(i => i.done === isDoneSection)
+                    .sort((a, b) => a.order - b.order);
+                const prev = sectionItems[newIndex - 1];
+                const next = sectionItems[newIndex];
+                if (prev && next) item.order = (prev.order + next.order) / 2;
+                else if (prev) item.order = prev.order + 10;
+                else if (next) item.order = next.order - 10;
+                else item.order = 10;
+
+                lists[color].items.push(item);
+                scheduleSave();
+                renderAll();
+            },
             onEnd(evt) {
-                // Re-enable contenteditable
-                el.querySelectorAll('[contenteditable="false"]').forEach(node => {
+                document.querySelectorAll('[contenteditable="false"]').forEach(node => {
                     if (node.dataset.wasEditable) {
                         node.contentEditable = node.dataset.wasEditable;
                         delete node.dataset.wasEditable;
                     }
                 });
+                // Only handle same-list reorder (cross-list is handled by onAdd)
+                if (evt.from !== evt.to) return;
                 const { oldIndex, newIndex } = evt;
                 if (oldIndex === newIndex) return;
                 const sec = lists[color].items.filter(i => i.done === isDoneSection).sort((a, b) => a.order - b.order);
