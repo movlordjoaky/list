@@ -86,7 +86,15 @@ function renderSection(containerId, sectionItems, color) {
         <button class="del-btn" title="Удалить">×</button>
         <button class="move-btn" title="Переместить в другой список">${color === 'green' ? arrowRight : arrowLeft}</button>
       `;
-        el.querySelector('.drag-handle').addEventListener('mousedown', e => e.preventDefault());
+        el.querySelector('.drag-handle').addEventListener('mousedown', () => {
+            // Disable all contenteditable in this list during drag
+            document.querySelectorAll('.item-text').forEach(t => t.contentEditable = 'false');
+            const restore = () => {
+                document.querySelectorAll('.item-text').forEach(t => t.contentEditable = 'true');
+                window.removeEventListener('mouseup', restore);
+            };
+            window.addEventListener('mouseup', restore);
+        });
         el.querySelector('[data-check]').addEventListener('click', () => toggleDone(color, item.id));
         el.querySelector('.del-btn').addEventListener('click', () => deleteItem(color, item.id));
         el.querySelector('.move-btn').addEventListener('click', () => moveItem(color, item.id));
