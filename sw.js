@@ -22,6 +22,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+    // Игнорировать не-http запросы (chrome-extension и др.)
+    if (!e.request.url.startsWith('http')) return;
     // Для API GitHub — только сеть, без кэша
     if (e.request.url.includes('api.github.com')) {
         e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
@@ -30,7 +32,7 @@ self.addEventListener('fetch', e => {
     // Для остального — сначала кэш, потом сеть
     e.respondWith(
         caches.match(e.request).then(cached => cached || fetch(e.request).then(response => {
-            if (response.ok) {
+            if (response.ok && e.request.url.startsWith('https://')) {
                 const clone = response.clone();
                 caches.open(CACHE).then(cache => cache.put(e.request, clone));
             }

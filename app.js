@@ -86,6 +86,7 @@ function renderSection(containerId, sectionItems, color) {
         <button class="del-btn" title="Удалить">×</button>
         <button class="move-btn" title="Переместить в другой список">${color === 'green' ? arrowRight : arrowLeft}</button>
       `;
+        el.querySelector('.drag-handle').addEventListener('mousedown', e => e.preventDefault());
         el.querySelector('[data-check]').addEventListener('click', () => toggleDone(color, item.id));
         el.querySelector('.del-btn').addEventListener('click', () => deleteItem(color, item.id));
         el.querySelector('.move-btn').addEventListener('click', () => moveItem(color, item.id));
@@ -204,20 +205,21 @@ function initSortable(color) {
             animation: 120,
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
-            forceFallback: !isDesktop,
+            forceFallback: true,
+            fallbackTolerance: isDesktop ? 3 : 0,
             onStart(evt) {
-                // Disable contenteditable during drag to prevent text selection
-                evt.item.querySelectorAll('[contenteditable]').forEach(el => {
-                    el.dataset.wasEditable = el.contentEditable;
-                    el.contentEditable = 'false';
+                // Disable contenteditable on all items to prevent text selection during drag
+                el.querySelectorAll('[contenteditable]').forEach(node => {
+                    node.dataset.wasEditable = node.contentEditable;
+                    node.contentEditable = 'false';
                 });
             },
             onEnd(evt) {
-                // Re-enable contenteditable after drag
-                evt.item.querySelectorAll('[contenteditable="false"]').forEach(el => {
-                    if (el.dataset.wasEditable) {
-                        el.contentEditable = el.dataset.wasEditable;
-                        delete el.dataset.wasEditable;
+                // Re-enable contenteditable
+                el.querySelectorAll('[contenteditable="false"]').forEach(node => {
+                    if (node.dataset.wasEditable) {
+                        node.contentEditable = node.dataset.wasEditable;
+                        delete node.dataset.wasEditable;
                     }
                 });
                 const { oldIndex, newIndex } = evt;
