@@ -629,3 +629,11 @@ body {
     border-color: #555;
     background: var(--surface2);
 }
+
+@media (max-width: 1080px) {
+
+    .item .del-btn,
+    .item .move-btn {
+        opacity: 1;
+    }
+}
