@@ -620,3 +620,12 @@ body {
 #modal-save:hover {
     opacity: 0.85;
 }
+
+.item-text:focus {
+    outline: none;
+}
+
+.item:has(.item-text:focus) {
+    border-color: #555;
+    background: var(--surface2);
+}
