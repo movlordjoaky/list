@@ -85,8 +85,7 @@ function renderSection(containerId, sectionItems, color) {
         <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
         <button class="del-btn" title="Удалить">×</button>
         <button class="move-btn" title="Переместить в другой список">${color === 'green' ? arrowRight : arrowLeft}</button>
-        `;
-        el.querySelector('.item-text').setAttribute('tabindex', '0');
+      `;
         el.querySelector('.drag-handle').addEventListener('mousedown', () => {
             // Disable all contenteditable in this list during drag
             document.querySelectorAll('.item-text').forEach(t => t.contentEditable = 'false');
@@ -456,34 +455,42 @@ document.addEventListener('keydown', e => {
     const idx = allTexts.indexOf(active);
 
     if (e.key === 'ArrowUp' && idx > 0) {
-        // Check if cursor is on the first line of this element
         const elRect = active.getBoundingClientRect();
         const lineHeight = parseFloat(getComputedStyle(active).lineHeight) || 20;
         if (rect.top - elRect.top < lineHeight) {
             e.preventDefault();
             const prev = allTexts[idx - 1];
             prev.focus();
-            // Move cursor to end of previous element
-            const r = document.createRange();
-            r.selectNodeContents(prev);
-            r.collapse(false);
-            sel.removeAllRanges();
-            sel.addRange(r);
+            // Place cursor at end
+            if (sel.modify) {
+                sel.modify('move', 'forward', 'documentboundary');
+                sel.modify('move', 'backward', 'lineboundary');
+                sel.modify('move', 'forward', 'documentboundary');
+            } else {
+                const r = document.createRange();
+                r.selectNodeContents(prev);
+                r.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(r);
+            }
         }
     } else if (e.key === 'ArrowDown' && idx < allTexts.length - 1) {
-        // Check if cursor is on the last line of this element
         const elRect = active.getBoundingClientRect();
         const lineHeight = parseFloat(getComputedStyle(active).lineHeight) || 20;
         if (elRect.bottom - rect.bottom < lineHeight) {
             e.preventDefault();
             const next = allTexts[idx + 1];
             next.focus();
-            // Move cursor to start of next element
-            const r = document.createRange();
-            r.selectNodeContents(next);
-            r.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(r);
+            // Place cursor at start
+            if (sel.modify) {
+                sel.modify('move', 'backward', 'documentboundary');
+            } else {
+                const r = document.createRange();
+                r.selectNodeContents(next);
+                r.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(r);
+            }
         }
     }
 });
@@ -501,6 +508,7 @@ document.getElementById('settings-btn-blue').addEventListener('click', showModal
 document.getElementById('clear-green').addEventListener('click', () => clearDone('green'));
 document.getElementById('clear-blue').addEventListener('click', () => clearDone('blue'));
 
+setInterval(() => { if (getToken() && getGistId()) sync(); }, 60000);
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && getToken() && getGistId()) sync();
 });
