@@ -508,11 +508,24 @@ document.getElementById('settings-btn-blue').addEventListener('click', showModal
 document.getElementById('clear-green').addEventListener('click', () => clearDone('green'));
 document.getElementById('clear-blue').addEventListener('click', () => clearDone('blue'));
 
-window.addEventListener('focus', () => { if (getToken() && getGistId()) sync(); });
+setInterval(() => { if (getToken() && getGistId()) sync(); }, 60000);
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && getToken() && getGistId()) sync();
 });
 window.addEventListener('online', () => { if (getToken() && getGistId()) sync(); });
+window.addEventListener('focus', () => { if (getToken() && getGistId()) sync(); });
+
+// Android back button — exit edit mode
+document.addEventListener('focusin', e => {
+    if (e.target.classList.contains('item-text')) {
+        history.pushState({ editing: true }, '');
+    }
+});
+window.addEventListener('popstate', () => {
+    if (document.activeElement?.classList.contains('item-text')) {
+        document.activeElement.blur();
+    }
+});
 
 const sortableScript = document.createElement('script');
 sortableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js';
