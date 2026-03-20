@@ -205,7 +205,21 @@ function initSortable(color) {
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
             forceFallback: !isDesktop,
+            onStart(evt) {
+                // Disable contenteditable during drag to prevent text selection
+                evt.item.querySelectorAll('[contenteditable]').forEach(el => {
+                    el.dataset.wasEditable = el.contentEditable;
+                    el.contentEditable = 'false';
+                });
+            },
             onEnd(evt) {
+                // Re-enable contenteditable after drag
+                evt.item.querySelectorAll('[contenteditable="false"]').forEach(el => {
+                    if (el.dataset.wasEditable) {
+                        el.contentEditable = el.dataset.wasEditable;
+                        delete el.dataset.wasEditable;
+                    }
+                });
                 const { oldIndex, newIndex } = evt;
                 if (oldIndex === newIndex) return;
                 const sec = lists[color].items.filter(i => i.done === isDoneSection).sort((a, b) => a.order - b.order);
