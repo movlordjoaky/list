@@ -198,11 +198,13 @@ function initSortable(color) {
         const el = document.getElementById(key);
         if (!window.Sortable || el.children.length === 0) return;
         const isDoneSection = section === 'done';
+        const isDesktop = window.matchMedia('(min-width: 1081px)').matches;
         sortables[key] = Sortable.create(el, {
             handle: '.drag-handle',
             animation: 120,
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
+            forceFallback: !isDesktop,
             onEnd(evt) {
                 const { oldIndex, newIndex } = evt;
                 if (oldIndex === newIndex) return;
@@ -448,7 +450,6 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && getToken() && getGistId()) sync();
 });
 window.addEventListener('online', () => { if (getToken() && getGistId()) sync(); });
-window.addEventListener('focus', () => { if (getToken() && getGistId()) sync(); });
 
 const sortableScript = document.createElement('script');
 sortableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js';
