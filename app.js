@@ -64,7 +64,7 @@ function render(color) {
     document.getElementById(`empty-${color}`).classList.toggle('visible', l.items.length === 0);
 
     const total = l.items.length;
-    document.getElementById(`count-${color}`).textContent = total ? `${done.length}/${total}` : '';
+    document.getElementById(`count-${color}`).textContent = `${done.length}/${total}`;
     document.getElementById(`clear-${color}`).classList.toggle('visible', done.length > 0);
     const deskClear = document.getElementById(`clear-${color}-d`);
     if (deskClear) deskClear.classList.toggle('visible', done.length > 0);
