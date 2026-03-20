@@ -65,6 +65,9 @@ function render(color) {
 
     const total = l.items.length;
     document.getElementById(`count-${color}`).textContent = `${done.length}/${total}`;
+    // also update desktop header counter
+    const dhCount = document.getElementById(`count-${color}-dh`);
+    if (dhCount) dhCount.textContent = `${done.length}/${total}`;
     document.getElementById(`clear-${color}`).classList.toggle('visible', done.length > 0);
     const deskClear = document.getElementById(`clear-${color}-d`);
     if (deskClear) deskClear.classList.toggle('visible', done.length > 0);

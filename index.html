@@ -22,12 +22,22 @@
 
   <div id="app">
 
-    <!-- DESKTOP CENTER HEADER -->
+    <!-- DESKTOP HEADER BAR (full width, above both panels) -->
     <div id="desktop-header">
-      <button class="clear-done icon-btn" id="clear-green-d" title="Удалить отмеченные (зелёный)">✕ отмеч</button>
-      <button class="sync-btn icon-btn" id="sync-btn" title="Синхронизация">⇅ Gist</button>
-      <button class="icon-btn" id="settings-btn" title="Настройки">⚙</button>
-      <button class="clear-done icon-btn" id="clear-blue-d" title="Удалить отмеченные (синий)">✕ отмеч</button>
+      <div class="dh-left">
+        <span class="panel-title green-panel">СПИСОК</span>
+        <span class="item-count" id="count-green-dh"></span>
+        <button class="clear-done icon-btn" id="clear-green-d" title="Удалить отмеченные (зелёный)">✕ отмеч</button>
+      </div>
+      <div class="dh-center">
+        <button class="sync-btn icon-btn" id="sync-btn" title="Синхронизация">⇅ Gist</button>
+        <button class="icon-btn" id="settings-btn" title="Настройки">⚙</button>
+      </div>
+      <div class="dh-right">
+        <button class="clear-done icon-btn" id="clear-blue-d" title="Удалить отмеченные (синий)">✕ отмеч</button>
+        <span class="item-count" id="count-blue-dh"></span>
+        <span class="panel-title blue-panel">СПИСОК</span>
+      </div>
     </div>
 
     <div id="swipe-container">
