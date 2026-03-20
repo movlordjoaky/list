@@ -508,7 +508,6 @@ document.getElementById('settings-btn-blue').addEventListener('click', showModal
 document.getElementById('clear-green').addEventListener('click', () => clearDone('green'));
 document.getElementById('clear-blue').addEventListener('click', () => clearDone('blue'));
 
-setInterval(() => { if (getToken() && getGistId()) sync(); }, 60000);
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && getToken() && getGistId()) sync();
 });
