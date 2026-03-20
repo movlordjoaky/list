@@ -512,6 +512,11 @@ document.getElementById('sync-btn-m').addEventListener('click', () => {
     sync();
 });
 document.getElementById('settings-btn-m').addEventListener('click', showModal);
+document.getElementById('sync-btn-blue').addEventListener('click', () => {
+    if (!getToken() || !getGistId() || !getFileName()) { showModal(); return; }
+    sync();
+});
+document.getElementById('settings-btn-blue').addEventListener('click', showModal);
 document.getElementById('clear-green').addEventListener('click', () => clearDone('green'));
 document.getElementById('clear-blue').addEventListener('click', () => clearDone('blue'));
 
