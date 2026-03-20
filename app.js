@@ -64,7 +64,7 @@ function render(color) {
     document.getElementById(`empty-${color}`).classList.toggle('visible', l.items.length === 0);
 
     const total = l.items.length;
-    document.getElementById(`count-${color}`).textContent = total ? `${done.length}/${total}` : '';
+    document.getElementById(`count-${color}`).textContent = `${done.length}/${total}`;
     document.getElementById(`clear-${color}`).classList.toggle('visible', done.length > 0);
 
     initSortable(color);
@@ -515,58 +515,14 @@ window.addEventListener('online', () => { if (getToken() && getGistId()) sync();
 window.addEventListener('focus', () => { if (getToken() && getGistId()) sync(); });
 
 // Android back button — exit edit mode
-//
-// Strategy: push a history entry whenever ANY editable field gains focus.
-// On Android, pressing Back first hides the keyboard (viewport resize) — we
-// detect that via visualViewport and blur the focused field ourselves so the
-// extra history entry gets consumed on that same Back press.
-// The popstate handler is a fallback for devices/browsers that fire it first.
-
-function isEditableField(el) {
-    if (!el) return false;
-    return el.classList.contains('item-text') ||
-        el.classList.contains('new-item-input') ||
-        el.id === 'input-config';
-}
-
-let editingHistoryPushed = false;
-
 document.addEventListener('focusin', e => {
-    if (isEditableField(e.target) && !editingHistoryPushed) {
+    if (e.target.classList.contains('item-text')) {
         history.pushState({ editing: true }, '');
-        editingHistoryPushed = true;
     }
 });
-
-document.addEventListener('focusout', e => {
-    if (isEditableField(e.target)) {
-        editingHistoryPushed = false;
-    }
-});
-
-// visualViewport fires when keyboard appears/disappears on Android
-// When keyboard hides while an editable field is still technically focused,
-// it means Back was pressed — blur immediately so the history entry is consumed.
-if (window.visualViewport) {
-    let lastViewportHeight = window.visualViewport.height;
-    window.visualViewport.addEventListener('resize', () => {
-        const newHeight = window.visualViewport.height;
-        const keyboardHidden = newHeight > lastViewportHeight + 100;
-        lastViewportHeight = newHeight;
-        if (keyboardHidden && isEditableField(document.activeElement)) {
-            document.activeElement.blur();
-        }
-    });
-}
-
-// Fallback: popstate fires on some browsers before the viewport resize
-window.addEventListener('popstate', e => {
-    if (e.state?.editing) {
-        const active = document.activeElement;
-        if (isEditableField(active)) {
-            active.blur();
-        }
-        editingHistoryPushed = false;
+window.addEventListener('popstate', () => {
+    if (document.activeElement?.classList.contains('item-text')) {
+        document.activeElement.blur();
     }
 });
 

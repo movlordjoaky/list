@@ -61,7 +61,6 @@ body {
         display: flex;
         flex-direction: column;
         height: 100dvh;
-        border-right: 1px solid var(--border);
     }
 
     .list-panel:last-child {
