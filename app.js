@@ -45,12 +45,10 @@ function loadLocal() {
                 }
             }
         }
-        if (localStorage.getItem('list_dirty') === '1') isDirty = true;
     } catch (e) { }
 }
 function saveLocal() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
-    localStorage.setItem('list_dirty', isDirty ? '1' : '0');
 }
 
 // ── RENDER ──
@@ -343,7 +341,6 @@ async function sync() {
     updateSyncBtn('syncing');
     try {
         const res = await fetch(`https://api.github.com/gists/${gistId}?t=${Date.now()}`, {
-            keepalive: true,
             headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) {
@@ -367,9 +364,6 @@ async function sync() {
                     lists[color].listUpdatedAt = rem.listUpdatedAt;
                     ensureOrder(color);
                     changed = true;
-                } else if ((lists[color].listUpdatedAt ?? 0) > (rem.listUpdatedAt ?? 0)) {
-                    // local is newer — must upload
-                    shouldUpload = true;
                 }
             }
             if (changed) { saveLocal(); renderAll(); shouldUpload = isDirty; }
@@ -378,12 +372,10 @@ async function sync() {
         if (shouldUpload) {
             await fetch(`https://api.github.com/gists/${gistId}`, {
                 method: 'PATCH',
-                keepalive: true,
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ files: { [fileName]: { content: JSON.stringify(lists) } } })
             });
             isDirty = false;
-            localStorage.setItem('list_dirty', '0');
         }
         updateSyncBtn('connected');
     } catch (e) {
@@ -399,6 +391,7 @@ function showModal() {
     const cfg = [getToken(), getGistId(), getFileName()].filter(Boolean).join('\n');
     document.getElementById('input-config').value = cfg;
     document.getElementById('modal-overlay').classList.add('show');
+    setTimeout(() => document.getElementById('input-config').focus(), 50);
 }
 document.getElementById('modal-cancel').addEventListener('click', () => {
     document.getElementById('modal-overlay').classList.remove('show');
@@ -522,13 +515,7 @@ document.getElementById('sync-btn-blue').addEventListener('click', () => {
 document.getElementById('settings-btn-blue').addEventListener('click', showModal);
 
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-        // Уходим в фон — синхронизируем немедленно если есть несохранённые изменения
-        if (isDirty && getToken() && getGistId()) sync();
-    } else if (document.visibilityState === 'visible') {
-        // Возвращаемся — синхронизируем чтобы подхватить изменения с других устройств
-        if (getToken() && getGistId()) sync();
-    }
+    if (document.visibilityState === 'visible' && getToken() && getGistId()) sync();
 });
 window.addEventListener('online', () => { if (getToken() && getGistId()) sync(); });
 window.addEventListener('focus', () => { if (getToken() && getGistId()) sync(); });
