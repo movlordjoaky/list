@@ -45,10 +45,12 @@ function loadLocal() {
                 }
             }
         }
+        if (localStorage.getItem('list_dirty') === '1') isDirty = true;
     } catch (e) { }
 }
 function saveLocal() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
+    localStorage.setItem('list_dirty', isDirty ? '1' : '0');
 }
 
 // ── RENDER ──
@@ -365,6 +367,9 @@ async function sync() {
                     lists[color].listUpdatedAt = rem.listUpdatedAt;
                     ensureOrder(color);
                     changed = true;
+                } else if ((lists[color].listUpdatedAt ?? 0) > (rem.listUpdatedAt ?? 0)) {
+                    // local is newer — must upload
+                    shouldUpload = true;
                 }
             }
             if (changed) { saveLocal(); renderAll(); shouldUpload = isDirty; }
@@ -378,6 +383,7 @@ async function sync() {
                 body: JSON.stringify({ files: { [fileName]: { content: JSON.stringify(lists) } } })
             });
             isDirty = false;
+            localStorage.setItem('list_dirty', '0');
         }
         updateSyncBtn('connected');
     } catch (e) {
