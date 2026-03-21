@@ -341,6 +341,7 @@ async function sync() {
     updateSyncBtn('syncing');
     try {
         const res = await fetch(`https://api.github.com/gists/${gistId}?t=${Date.now()}`, {
+            keepalive: true,
             headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) {
@@ -372,6 +373,7 @@ async function sync() {
         if (shouldUpload) {
             await fetch(`https://api.github.com/gists/${gistId}`, {
                 method: 'PATCH',
+                keepalive: true,
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ files: { [fileName]: { content: JSON.stringify(lists) } } })
             });
@@ -514,7 +516,13 @@ document.getElementById('sync-btn-blue').addEventListener('click', () => {
 document.getElementById('settings-btn-blue').addEventListener('click', showModal);
 
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && getToken() && getGistId()) sync();
+    if (document.visibilityState === 'hidden') {
+        // Уходим в фон — синхронизируем немедленно если есть несохранённые изменения
+        if (isDirty && getToken() && getGistId()) sync();
+    } else if (document.visibilityState === 'visible') {
+        // Возвращаемся — синхронизируем чтобы подхватить изменения с других устройств
+        if (getToken() && getGistId()) sync();
+    }
 });
 window.addEventListener('online', () => { if (getToken() && getGistId()) sync(); });
 window.addEventListener('focus', () => { if (getToken() && getGistId()) sync(); });
