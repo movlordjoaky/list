@@ -103,7 +103,6 @@ function renderSection(containerId, sectionItems, color) {
         const textEl = el.querySelector('.item-text');
         textEl.addEventListener('blur', () => {
             const t = textEl.textContent.trim();
-            if (!t) { deleteItem(color, item.id); return; }
             if (t !== item.text) { item.text = t; scheduleSave(); }
             // Always update DOM to trimmed value
             if (textEl.textContent !== t) textEl.textContent = t;
