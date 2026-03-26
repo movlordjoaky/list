@@ -429,8 +429,7 @@ function setupBottomInput(id, color) {
     input.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            // empty on Enter: do nothing (no item to delete, just a blank input row)
-            if (!input.value.trim()) return;
+            if (!input.value.trim()) { input.blur(); return; }
             addItem(color, input.value.trim());
             input.value = '';
         } else if (e.key === 'Escape') {
