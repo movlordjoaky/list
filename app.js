@@ -335,12 +335,13 @@ function updateSyncBtn(state) {
 
 async function sync() {
     if (isSyncing) return;
-    const token = getToken(), gistId = getGistId(), fileName = getFileName();
-    if (!token || !gistId || !fileName) return;
+    const token = getToken(), gistId = getGistId();
+    if (!token || !gistId) return;
     isSyncing = true;
     updateSyncBtn('syncing');
     try {
         const res = await fetch(`https://api.github.com/gists/${gistId}?t=${Date.now()}`, {
+            keepalive: true,
             headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) {
@@ -349,6 +350,7 @@ async function sync() {
             updateSyncBtn(''); return;
         }
         const data = await res.json();
+        const fileName = Object.keys(data.files)[0];
         const content = data.files?.[fileName]?.content;
         let shouldUpload = isDirty;
 
@@ -388,7 +390,7 @@ async function sync() {
 
 // ── MODAL ──
 function showModal() {
-    const cfg = [getToken(), getGistId(), getFileName()].filter(Boolean).join('\n');
+    const cfg = [getToken(), getGistId()].filter(Boolean).join('\n');
     document.getElementById('input-config').value = cfg;
     document.getElementById('modal-overlay').classList.add('show');
     setTimeout(() => document.getElementById('input-config').focus(), 50);
@@ -398,10 +400,9 @@ document.getElementById('modal-cancel').addEventListener('click', () => {
 });
 document.getElementById('modal-save').addEventListener('click', async () => {
     const lines = document.getElementById('input-config').value.trim().split('\n').map(l => l.trim()).filter(Boolean);
-    if (lines.length < 3) { toast('Нужно три строки'); return; }
+    if (lines.length < 2) { toast('Нужно две строки'); return; }
     localStorage.setItem(TOKEN_KEY, lines[0]);
     localStorage.setItem(GIST_ID_KEY, lines[1]);
-    localStorage.setItem(FILE_KEY, lines[2]);
     document.getElementById('modal-overlay').classList.remove('show');
     toast('Настройки сохранены');
     await sync();
@@ -498,18 +499,18 @@ document.addEventListener('keydown', e => {
 
 // Desktop buttons
 document.getElementById('sync-btn').addEventListener('click', () => {
-    if (!getToken() || !getGistId() || !getFileName()) { showModal(); return; }
+    if (!getToken() || !getGistId()) { showModal(); return; }
     sync();
 });
 document.getElementById('settings-btn').addEventListener('click', showModal);
 // Mobile buttons
 document.getElementById('sync-btn-m').addEventListener('click', () => {
-    if (!getToken() || !getGistId() || !getFileName()) { showModal(); return; }
+    if (!getToken() || !getGistId()) { showModal(); return; }
     sync();
 });
 document.getElementById('settings-btn-m').addEventListener('click', showModal);
 document.getElementById('sync-btn-blue').addEventListener('click', () => {
-    if (!getToken() || !getGistId() || !getFileName()) { showModal(); return; }
+    if (!getToken() || !getGistId()) { showModal(); return; }
     sync();
 });
 document.getElementById('settings-btn-blue').addEventListener('click', showModal);
