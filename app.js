@@ -134,9 +134,6 @@ function renderSection(containerId, sectionItems, color) {
                     const newEl = document.querySelector(`[data-id="${newId}"] .item-text`);
                     if (newEl) { newEl.focus(); }
                 }, 0);
-            } else if ((e.key === 'Backspace' || e.key === 'Delete') && textEl.textContent.trim() === '') {
-                e.preventDefault();
-                deleteItem(color, item.id);
             } else if (e.key === 'Escape') {
                 textEl.blur();
             }
@@ -431,7 +428,7 @@ function setupBottomInput(id, color) {
     const input = document.getElementById(id);
     input.addEventListener('keydown', e => {
         if (e.key === 'Enter') { addItem(color, input.value); input.value = ''; }
-        else if (e.key === 'Escape') { input.blur(); }
+        else if (e.key === 'Escape') { e.preventDefault(); input.blur(); }
     });
     input.addEventListener('blur', () => {
         if (input.value.trim()) { addItem(color, input.value.trim()); input.value = ''; }
