@@ -431,6 +431,7 @@ function setupBottomInput(id, color) {
     const input = document.getElementById(id);
     input.addEventListener('keydown', e => {
         if (e.key === 'Enter') { addItem(color, input.value); input.value = ''; }
+        else if (e.key === 'Escape') { input.blur(); }
     });
     input.addEventListener('blur', () => {
         if (input.value.trim()) { addItem(color, input.value.trim()); input.value = ''; }
