@@ -103,8 +103,8 @@ function renderSection(containerId, sectionItems, color) {
         const textEl = el.querySelector('.item-text');
         textEl.addEventListener('blur', () => {
             const t = textEl.textContent.trim();
+            if (!t) { deleteItem(color, item.id); return; }
             if (t !== item.text) { item.text = t; scheduleSave(); }
-            // Always update DOM to trimmed value
             if (textEl.textContent !== t) textEl.textContent = t;
         });
         textEl.addEventListener('keydown', e => {
@@ -134,7 +134,8 @@ function renderSection(containerId, sectionItems, color) {
                     if (newEl) { newEl.focus(); }
                 }, 0);
             } else if (e.key === 'Escape') {
-                textEl.blur();
+                e.preventDefault();
+                textEl.blur(); // blur handles: delete if empty, save if not
             }
         });
         container.appendChild(el);
@@ -426,11 +427,23 @@ if (getToken() && getGistId()) { updateSyncBtn('syncing'); sync(); }
 function setupBottomInput(id, color) {
     const input = document.getElementById(id);
     input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { addItem(color, input.value); input.value = ''; }
-        else if (e.key === 'Escape') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // empty on Enter: do nothing (no item to delete, just a blank input row)
+            if (!input.value.trim()) return;
+            addItem(color, input.value.trim());
+            input.value = '';
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            input.blur(); // blur handles save-or-discard
+        }
+        // Backspace/Delete on empty: default browser behaviour (nothing to delete)
     });
     input.addEventListener('blur', () => {
-        if (input.value.trim()) { addItem(color, input.value.trim()); input.value = ''; }
+        // empty on blur: just clear (bottom row always stays, nothing to delete)
+        if (!input.value.trim()) { input.value = ''; return; }
+        addItem(color, input.value.trim());
+        input.value = '';
     });
 }
 setupBottomInput('input-green', 'green');
