@@ -561,7 +561,7 @@ window.addEventListener('popstate', e => {
 
 function setEditMode(newEditMode) {
     editMode = newEditMode;
-    console.log(editMode);
+    console.log(`[editMode] ${editMode}`);
 }
 
 const sortableScript = document.createElement('script');
