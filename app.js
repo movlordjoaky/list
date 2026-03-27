@@ -529,6 +529,13 @@ document.addEventListener('focusout', e => {
     }
 });
 
+document.querySelectorAll('.new-item-row').forEach(row => {
+    row.addEventListener('click', () => {
+        const input = row.querySelector('.new-item-input');
+        if (input) input.focus();
+    });
+});
+
 if (window.visualViewport) {
     let lastViewportHeight = window.visualViewport.height;
     window.visualViewport.addEventListener('resize', () => {
