@@ -19,6 +19,7 @@ let isDirty = false;
 let isSyncing = false;
 let sortables = {};
 let currentTab = 'green';
+let editMode = false;
 
 function maxOrder(color) {
     const it = lists[color].items;
@@ -557,6 +558,11 @@ window.addEventListener('popstate', e => {
         editingHistoryPushed = false;
     }
 });
+
+function setEditMode(newEditMode) {
+    editMode = newEditMode;
+    console.log(editMode);
+}
 
 const sortableScript = document.createElement('script');
 sortableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js';
