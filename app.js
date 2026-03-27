@@ -434,9 +434,17 @@ function setupBottomInput(id, color) {
             input.value = '';
         } else if (e.key === 'Escape') {
             e.preventDefault();
-            input.blur(); // blur handles save-or-discard
+            input.blur();
         }
-        // Backspace/Delete on empty: default browser behaviour (nothing to delete)
+    });
+    // Android virtual keyboard fires 'input' instead of keydown for Enter
+    input.addEventListener('input', () => {
+        if (input.value.includes('\n') || input.value.includes('\r')) {
+            const val = input.value.replace(/[\r\n]/g, '').trim();
+            input.value = '';
+            if (!val) { input.blur(); return; }
+            addItem(color, val);
+        }
     });
     input.addEventListener('blur', () => {
         // empty on blur: just clear (bottom row always stays, nothing to delete)
