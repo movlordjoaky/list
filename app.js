@@ -219,6 +219,7 @@ function initSortable(color) {
             fallbackTolerance: isDesktop ? 3 : 0,
             group: isDesktop ? `list-${section}` : key,
             onStart(evt) {
+                document.body.classList.add('dragging');
                 document.querySelectorAll('.item-text').forEach(node => {
                     node.dataset.wasEditable = node.contentEditable;
                     node.contentEditable = 'false';
@@ -247,6 +248,7 @@ function initSortable(color) {
                 renderAll();
             },
             onEnd(evt) {
+                document.body.classList.remove('dragging');
                 document.querySelectorAll('[contenteditable="false"]').forEach(node => {
                     if (node.dataset.wasEditable) {
                         node.contentEditable = node.dataset.wasEditable;

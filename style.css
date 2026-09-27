@@ -407,6 +407,11 @@ body {
     display: block;
 }
 
+body.dragging * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
 .item-text {
     flex: 1;
     font-size: 14px;
