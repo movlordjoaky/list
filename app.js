@@ -45,11 +45,13 @@ function loadLocal() {
                 }
             }
         }
+        if (localStorage.getItem('list_dirty') === '1') isDirty = true;
     } catch (e) { }
 }
 
 function saveLocal() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
+    localStorage.setItem('list_dirty', isDirty ? '1' : '0');
 }
 
 function render(color) {
@@ -358,6 +360,7 @@ async function sync() {
                 body: JSON.stringify({ files: { [fileName]: { content: JSON.stringify(lists) } } })
             });
             isDirty = false;
+            localStorage.setItem('list_dirty', '0');
         }
         updateSyncBtn('connected');
         lastSyncTime = Date.now();
@@ -514,7 +517,11 @@ document.getElementById('sync-btn-blue').addEventListener('click', () => {
 document.getElementById('settings-btn-blue').addEventListener('click', showModal);
 
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && getToken() && getGistId()) sync();
+    if (document.visibilityState === 'hidden') {
+        if (isDirty && getToken() && getGistId()) sync();
+    } else if (document.visibilityState === 'visible') {
+        if (getToken() && getGistId()) sync();
+    }
 });
 window.addEventListener('online', () => { if (getToken() && getGistId()) sync(); });
 window.addEventListener('focus', () => { if (getToken() && getGistId()) sync(); });
