@@ -438,6 +438,14 @@ function setupBottomInput(id, color) {
 setupBottomInput('input-green', 'green');
 setupBottomInput('input-blue', 'blue');
 
+// Ctrl+S → sync
+document.addEventListener('keydown', e => {
+    if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (getToken() && getGistId()) sync();
+    }
+});
+
 document.addEventListener('keydown', e => {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
     const active = document.activeElement;
