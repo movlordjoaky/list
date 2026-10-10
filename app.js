@@ -466,7 +466,7 @@ document.addEventListener('keydown', e => {
         e.preventDefault();
         if (getToken() && getGistId()) sync();
     }
-});
+}, true);
 
 document.addEventListener('keydown', e => {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
