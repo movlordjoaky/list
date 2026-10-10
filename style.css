@@ -432,6 +432,21 @@ body.dragging * {
     color: var(--done-color);
 }
 
+.item-link {
+    color: var(--blue);
+    text-decoration: underline;
+    cursor: pointer;
+    word-break: break-all;
+}
+
+.item-link:hover {
+    opacity: 0.8;
+}
+
+.item.done .item-link {
+    color: var(--done-color);
+}
+
 .del-btn {
     background: none;
     border: none;

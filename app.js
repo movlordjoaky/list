@@ -85,7 +85,7 @@ function renderSection(containerId, sectionItems, color) {
         el.innerHTML = `
         <div class="drag-handle">⋮⋮</div>
         <div class="check" data-check></div>
-        <div class="item-text" contenteditable="true" spellcheck="false">${escHtml(item.text)}</div>
+        <div class="item-text" contenteditable="true" spellcheck="false">${renderTextWithLinks(item.text)}</div>
         <button class="del-btn" title="Удалить">×</button>
         <button class="move-btn" title="Переместить в другой список">${color === 'green' ? arrowRight : arrowLeft}</button>
       `;
@@ -135,12 +135,31 @@ function renderSection(containerId, sectionItems, color) {
                 textEl.blur();
             }
         });
+        el.querySelectorAll('.item-link').forEach(a => {
+            a.addEventListener('click', e => e.stopPropagation());
+            a.addEventListener('mousedown', e => e.stopPropagation());
+        });
         container.appendChild(el);
     });
 }
 
 function escHtml(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderTextWithLinks(text) {
+    const urlRe = /https?:\/\/[^\s]+/g;
+    let result = '';
+    let last = 0;
+    let m;
+    while ((m = urlRe.exec(text)) !== null) {
+        result += escHtml(text.slice(last, m.index));
+        const url = escHtml(m[0]);
+        result += `<a href="${url}" target="_blank" rel="noopener" class="item-link">${url}</a>`;
+        last = m.index + m[0].length;
+    }
+    result += escHtml(text.slice(last));
+    return result;
 }
 
 function renderAll() { render('green'); render('blue'); }
