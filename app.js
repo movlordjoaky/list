@@ -136,8 +136,12 @@ function renderSection(containerId, sectionItems, color) {
             }
         });
         el.querySelectorAll('.item-link').forEach(a => {
-            a.addEventListener('click', e => e.stopPropagation());
-            a.addEventListener('mousedown', e => e.stopPropagation());
+            a.addEventListener('pointerdown', e => e.stopPropagation(), true);
+            a.addEventListener('click', e => {
+                e.stopPropagation();
+                e.preventDefault();
+                window.open(a.href, '_blank', 'noopener');
+            });
         });
         container.appendChild(el);
     });
