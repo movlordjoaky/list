@@ -464,10 +464,11 @@ function setupBottomInput(id, color) {
 setupBottomInput('input-green', 'green');
 setupBottomInput('input-blue', 'blue');
 
-// Ctrl+S → sync
-document.addEventListener('keydown', e => {
-    if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+// Ctrl+S → sync (capture phase to intercept before browser)
+window.addEventListener('keydown', e => {
+    if (e.key === 's' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
         e.preventDefault();
+        e.stopPropagation();
         if (getToken() && getGistId()) sync();
     }
 }, true);
