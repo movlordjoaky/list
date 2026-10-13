@@ -108,6 +108,12 @@ function renderSection(containerId, sectionItems, color) {
             if (textEl.textContent !== t) textEl.textContent = t;
         });
         textEl.addEventListener('keydown', e => {
+            if (e.key === 's' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (getToken() && getGistId()) sync();
+                return;
+            }
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const t = textEl.textContent.trim();
