@@ -2,7 +2,6 @@ const TOKEN_KEY = 'gist_token';
 const GIST_ID_KEY = 'gist_id';
 const FILE_KEY = 'gist_file';
 const STORAGE_KEY = 'list_v2';
-const SYNC_INTERVAL = 60000;
 
 function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
 function getGistId() { return localStorage.getItem(GIST_ID_KEY) || ''; }
@@ -13,13 +12,14 @@ const lists = {
     blue: { items: [], listUpdatedAt: 0 }
 };
 
-let autoSyncTimer = null;
-let lastSyncTime = 0;
+let syncTimer = null;
+let editVersion = 0;
 let isDirty = false;
 let isSyncing = false;
 let sortables = {};
 let currentTab = 'green';
 let editMode = false;
+let syncFailCount = 0;
 
 function maxOrder(color) {
     const it = lists[color].items;
@@ -103,8 +103,17 @@ function renderSection(containerId, sectionItems, color) {
         const textEl = el.querySelector('.item-text');
         textEl.addEventListener('blur', () => {
             const t = textEl.textContent.trim();
-            if (!t) { deleteItem(color, item.id); return; }
-            if (t !== item.text) { item.text = t; scheduleSave(); }
+            if (!t) {
+                deleteItem(color, item.id);
+                return;
+            }
+            if (t !== item.text) {
+                item.text = t;
+                scheduleSave(color);
+                render(color);
+            } else if (textEl.textContent !== t) {
+                render(color);
+            }
             if (textEl.textContent !== t) textEl.textContent = t;
         });
         textEl.addEventListener('keydown', e => {
@@ -120,7 +129,7 @@ function renderSection(containerId, sectionItems, color) {
                 if (!t) { deleteItem(color, item.id); return; }
                 if (t !== item.text) { item.text = t; }
                 if (textEl.textContent !== t) textEl.textContent = t;
-                scheduleSave();
+                scheduleSave(color);
                 const sectionItems = lists[color].items
                     .filter(i => i.done === item.done)
                     .sort((a, b) => a.order - b.order);
@@ -154,7 +163,12 @@ function renderSection(containerId, sectionItems, color) {
 }
 
 function escHtml(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function renderTextWithLinks(text) {
@@ -165,7 +179,7 @@ function renderTextWithLinks(text) {
     while ((m = urlRe.exec(text)) !== null) {
         result += escHtml(text.slice(last, m.index));
         const url = escHtml(m[0]);
-        result += `<a href="${url}" target="_blank" rel="noopener" class="item-link">${url}</a>`;
+        result += `<a href="${url}" target="_blank" rel="noopener" class="item-link" draggable="false">${url}</a>`;
         last = m.index + m[0].length;
     }
     result += escHtml(text.slice(last));
@@ -177,17 +191,23 @@ function renderAll() { render('green'); render('blue'); }
 function addItem(color, text) {
     if (!text.trim()) return;
     lists[color].items.push({ id: Date.now().toString(), text: text.trim(), done: false, order: maxOrder(color) + 10 });
-    scheduleSave(); render(color);
+    scheduleSave(color);
+    render(color);
 }
 
 function toggleDone(color, id) {
     const item = lists[color].items.find(i => i.id === id);
-    if (item) { item.done = !item.done; scheduleSave(); render(color); }
+    if (item) {
+        item.done = !item.done;
+        scheduleSave(color);
+        render(color);
+    }
 }
 
 function deleteItem(color, id) {
     lists[color].items = lists[color].items.filter(i => i.id !== id);
-    scheduleSave(); render(color);
+    scheduleSave(color);
+    render(color);
 }
 
 function moveItem(fromColor, id) {
@@ -210,26 +230,26 @@ function moveItem(fromColor, id) {
     render(toColor);
 }
 
-function scheduleSave() {
+function scheduleSave(color) {
     const now = Date.now();
-    lists.green.listUpdatedAt = now;
-    lists.blue.listUpdatedAt = now;
-    saveLocal();
+    if (color) {
+        lists[color].listUpdatedAt = now;
+    } else {
+        lists.green.listUpdatedAt = now;
+        lists.blue.listUpdatedAt = now;
+    }
+    editVersion++;
     isDirty = true;
+    saveLocal();
     scheduleSync();
 }
 
 function scheduleSync() {
-    if (autoSyncTimer) clearTimeout(autoSyncTimer);
     if (!getToken() || !getGistId()) return;
-
-    const now = Date.now();
-    const timeSinceLastSync = now - lastSyncTime;
-    const waitTime = Math.max(2000, SYNC_INTERVAL - timeSinceLastSync);
-
-    autoSyncTimer = setTimeout(() => {
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => {
         if (isDirty) sync();
-    }, waitTime);
+    }, 400);
 }
 
 function initSortable(color) {
@@ -295,7 +315,8 @@ function initSortable(color) {
                 sec.splice(oldIndex, 1);
                 sec.splice(newIndex, 0, moved);
                 sec.forEach((item, idx) => { item.order = (idx + 1) * 10; });
-                scheduleSave(); render(color);
+                scheduleSave(color);
+                render(color);
             }
         });
     });
@@ -341,7 +362,7 @@ function updateSyncBtn(state) {
         btn.classList.remove('active', 'syncing');
         if (state === 'connected') { btn.textContent = '✓ Gist'; btn.classList.add('active'); }
         else if (state === 'syncing') { btn.textContent = '⇅ Gist'; btn.classList.add('syncing'); }
-        else { btn.textContent = '⇅ Sync'; }
+        else { btn.textContent = '⇅ Gist'; }
     });
 }
 
@@ -350,7 +371,7 @@ async function sync() {
     const token = getToken(), gistId = getGistId();
     if (!token || !gistId) return;
     isSyncing = true;
-    if (autoSyncTimer) clearTimeout(autoSyncTimer);
+    if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
     updateSyncBtn('syncing');
     try {
         const res = await fetch(`https://api.github.com/gists/${gistId}?t=${Date.now()}`, {
@@ -360,7 +381,13 @@ async function sync() {
         if (!res.ok) {
             const err = await res.json();
             toast(`Ошибка ${res.status}: ${err.message}`);
-            updateSyncBtn(''); return;
+            updateSyncBtn('');
+            if (res.status === 401 || res.status === 403) {
+                syncFailCount = 5;
+            } else {
+                syncFailCount++;
+            }
+            return;
         }
         const data = await res.json();
         const fileName = Object.keys(data.files)[0];
@@ -368,7 +395,14 @@ async function sync() {
         let shouldUpload = isDirty;
         if (content) {
             let remote;
-            try { remote = JSON.parse(content); } catch (e) { toast('Ошибка формата данных'); updateSyncBtn(''); return; }
+            try {
+                remote = JSON.parse(content);
+            } catch (e) {
+                toast('Ошибка формата данных');
+                updateSyncBtn('');
+                syncFailCount++;
+                return;
+            }
             let changed = false;
             for (const color of ['green', 'blue']) {
                 const rem = remote[color];
@@ -383,21 +417,37 @@ async function sync() {
             if (changed) { saveLocal(); renderAll(); shouldUpload = isDirty; }
         }
         if (shouldUpload) {
+            const payload = JSON.parse(JSON.stringify(lists));
+            for (const c of ['green', 'blue']) {
+                payload[c].items = payload[c].items.filter(i => i.text.trim());
+            }
+            const patchVersion = editVersion;
             await fetch(`https://api.github.com/gists/${gistId}`, {
                 method: 'PATCH',
+                keepalive: true,
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ files: { [fileName]: { content: JSON.stringify(lists) } } })
+                body: JSON.stringify({ files: { [fileName]: { content: JSON.stringify(payload) } } })
             });
-            isDirty = false;
-            localStorage.setItem('list_dirty', '0');
+            if (editVersion === patchVersion) {
+                isDirty = false;
+                localStorage.setItem('list_dirty', '0');
+            }
         }
+        syncFailCount = 0;
         updateSyncBtn('connected');
-        lastSyncTime = Date.now();
     } catch (e) {
+        syncFailCount++;
         toast('Ошибка сети');
         updateSyncBtn('');
     } finally {
         isSyncing = false;
+        if (isDirty && syncFailCount < 5) {
+            if (syncFailCount > 0) {
+                setTimeout(sync, 1000 * Math.pow(2, syncFailCount));   // 2s, 4s, 8s, 16s
+            } else {
+                scheduleSync();
+            }
+        }
     }
 }
 
