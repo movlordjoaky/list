@@ -601,8 +601,6 @@ document.getElementById('settings-btn-blue').addEventListener('click', showModal
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
         if (isDirty && getToken() && getGistId()) sync();
-    } else if (document.visibilityState === 'visible') {
-        if (getToken() && getGistId()) sync();
     }
 });
 window.addEventListener('online', () => { if (getToken() && getGistId()) sync(); });
