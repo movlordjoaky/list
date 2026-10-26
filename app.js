@@ -108,13 +108,15 @@ function renderSection(containerId, sectionItems, color) {
                 return;
             }
             if (t !== item.text) {
+                const urlRe = /https?:\/\/[^\s]+/g;
+                const prevUrls = (item.text.match(urlRe) || []).join('\n');
+                const newUrls = (t.match(urlRe) || []).join('\n');
                 item.text = t;
                 scheduleSave(color);
-                render(color);
-            } else if (textEl.textContent !== t) {
-                render(color);
+                if (prevUrls !== newUrls) {
+                    render(color);
+                }
             }
-            if (textEl.textContent !== t) textEl.textContent = t;
         });
         textEl.addEventListener('keydown', e => {
             if (e.key === 's' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
