@@ -606,7 +606,6 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 window.addEventListener('online', () => { if (getToken() && getGistId()) sync(); });
-window.addEventListener('focus', () => { if (getToken() && getGistId()) sync(); });
 
 function isEditableField(el) {
     if (!el) return false;
