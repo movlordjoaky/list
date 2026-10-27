@@ -1,4 +1,4 @@
-console.log('[app.js] version: 27.10.2026 21:10');
+console.log('[app.js] version: 27.10.2026 21:19');
 
 const TOKEN_KEY = 'gist_token';
 const GIST_ID_KEY = 'gist_id';
@@ -21,7 +21,6 @@ let isSyncing = false;
 let sortables = {};
 let currentTab = 'green';
 let editMode = false;
-let syncFailCount = 0;
 
 function maxOrder(color) {
     const it = lists[color].items;
@@ -363,9 +362,10 @@ function updateSyncBtn(state) {
     ['sync-btn', 'sync-btn-m', 'sync-btn-blue'].forEach(id => {
         const btn = document.getElementById(id);
         if (!btn) return;
-        btn.classList.remove('active', 'syncing');
+        btn.classList.remove('active', 'syncing', 'error');
         if (state === 'connected') { btn.textContent = '✓ Gist'; btn.classList.add('active'); }
         else if (state === 'syncing') { btn.textContent = '⇅ Gist'; btn.classList.add('syncing'); }
+        else if (state === 'error') { btn.textContent = '⚠ Gist'; btn.classList.add('error'); }
         else { btn.textContent = '⇅ Gist'; }
     });
 }
@@ -385,12 +385,7 @@ async function sync() {
         if (!res.ok) {
             const err = await res.json();
             toast(`Ошибка ${res.status}: ${err.message}`);
-            updateSyncBtn('');
-            if (res.status === 401 || res.status === 403) {
-                syncFailCount = 5;
-            } else {
-                syncFailCount++;
-            }
+            updateSyncBtn('error');
             return;
         }
         const data = await res.json();
@@ -403,8 +398,7 @@ async function sync() {
                 remote = JSON.parse(content);
             } catch (e) {
                 toast('Ошибка формата данных');
-                updateSyncBtn('');
-                syncFailCount++;
+                updateSyncBtn('error');
                 return;
             }
             let changed = false;
@@ -437,21 +431,12 @@ async function sync() {
                 localStorage.setItem('list_dirty', '0');
             }
         }
-        syncFailCount = 0;
         updateSyncBtn('connected');
     } catch (e) {
-        syncFailCount++;
         toast('Ошибка сети');
-        updateSyncBtn('');
+        updateSyncBtn('error');
     } finally {
         isSyncing = false;
-        if (isDirty && syncFailCount < 5) {
-            if (syncFailCount > 0) {
-                setTimeout(sync, 1000 * Math.pow(2, syncFailCount));   // 2s, 4s, 8s, 16s
-            } else {
-                scheduleSync();
-            }
-        }
     }
 }
 
