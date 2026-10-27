@@ -1,4 +1,4 @@
-console.log('[app.js] version: 27.10.2026 20:48');
+console.log('[app.js] version: 27.10.2026 21:10');
 
 const TOKEN_KEY = 'gist_token';
 const GIST_ID_KEY = 'gist_id';
@@ -605,7 +605,6 @@ document.addEventListener('visibilitychange', () => {
         if (isDirty && getToken() && getGistId()) sync();
     }
 });
-window.addEventListener('online', () => { if (getToken() && getGistId()) sync(); });
 
 function isEditableField(el) {
     if (!el) return false;
