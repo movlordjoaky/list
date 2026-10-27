@@ -1,3 +1,5 @@
+console.log('[app.js] version: 27.10.2026 20:48');
+
 const TOKEN_KEY = 'gist_token';
 const GIST_ID_KEY = 'gist_id';
 const FILE_KEY = 'gist_file';
