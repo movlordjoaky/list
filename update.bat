@@ -45,4 +45,4 @@ if errorlevel 1 (
 
 echo.
 echo [OK] Done: list-%VERSION% ^| "%MSG%"
-pause
+exit /b 0
