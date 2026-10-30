@@ -249,9 +249,13 @@ function scheduleSave(color) {
 
 function scheduleSync() {
     if (!getToken() || !getGistId()) return;
+    if (!isDirty) return;
+    if (isEditingNow()) return;
     if (syncTimer) clearTimeout(syncTimer);
     syncTimer = setTimeout(() => {
-        if (isDirty) sync();
+        if (!isDirty) return;
+        if (isEditingNow()) return;
+        sync();
     }, 400);
 }
 
@@ -591,6 +595,10 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
+function isEditingNow() {
+    return isEditableField(document.activeElement);
+}
+
 function isEditableField(el) {
     if (!el) return false;
     return el.classList.contains('item-text') ||
@@ -607,9 +615,11 @@ document.addEventListener('focusin', e => {
 });
 
 document.addEventListener('focusout', e => {
-    if (isEditableField(e.target)) {
-        editingHistoryPushed = false;
-    }
+    if (!isEditableField(e.target)) return;
+    editingHistoryPushed = false;
+    setTimeout(() => {
+        if (!isEditingNow()) scheduleSync();
+    }, 0);
 });
 
 document.querySelectorAll('.new-item-row').forEach(row => {
