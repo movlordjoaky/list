@@ -1,4 +1,4 @@
-const CACHE = 'list-v2';
+﻿const CACHE = 'list';
 const ASSETS = [
     '/list/',
     '/list/index.html',
@@ -46,7 +46,7 @@ self.addEventListener('fetch', e => {
         return;
     }
 
-    // остальное — cache-first
+    // РѕСЃС‚Р°Р»СЊРЅРѕРµ вЂ” cache-first
     e.respondWith(
         caches.match(e.request).then(cached => cached || fetch(e.request).then(response => {
             if (response.ok && e.request.url.startsWith('https://')) {

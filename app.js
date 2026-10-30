@@ -1,4 +1,7 @@
-console.log('[app.js] version: 30.10.2026 20:19');
+caches.keys().then(keys => {
+    const listCache = keys.find(k => k.startsWith('list-'));
+    console.log(`[app.js] cache: ${listCache || 'нет кэша'}`);
+});
 
 const TOKEN_KEY = 'gist_token';
 const GIST_ID_KEY = 'gist_id';
@@ -661,4 +664,13 @@ sortableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sor
 sortableScript.onload = () => renderAll();
 document.head.appendChild(sortableScript);
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/list/sw.js');
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/list/sw.js');
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        location.reload();
+    });
+}
