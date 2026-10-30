@@ -1,4 +1,4 @@
-﻿const CACHE = 'list-2026-10-30_20-43-25';
+const CACHE = 'list-2026-10-30_20-51-13';
 const ASSETS = [
     '/list/',
     '/list/index.html',
@@ -46,7 +46,7 @@ self.addEventListener('fetch', e => {
         return;
     }
 
-    // РѕСЃС‚Р°Р»СЊРЅРѕРµ вЂ” cache-first
+    // остальное — cache-first
     e.respondWith(
         caches.match(e.request).then(cached => cached || fetch(e.request).then(response => {
             if (response.ok && e.request.url.startsWith('https://')) {
