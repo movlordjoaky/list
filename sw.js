@@ -22,14 +22,31 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-    // Игнорировать не-http запросы (chrome-extension и др.)
     if (!e.request.url.startsWith('http')) return;
-    // Для API GitHub — только сеть, без кэша
     if (e.request.url.includes('api.github.com')) {
         e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
         return;
     }
-    // Для остального — сначала кэш, потом сеть
+
+    const url = new URL(e.request.url);
+    const sameOrigin = url.origin === self.location.origin;
+
+    if (sameOrigin && (url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.html') || url.pathname === '/list/')) {
+        // stale-while-revalidate
+        e.respondWith(
+            caches.open(CACHE).then(async cache => {
+                const cached = await cache.match(e.request);
+                const fetchPromise = fetch(e.request).then(response => {
+                    if (response.ok) cache.put(e.request, response.clone());
+                    return response;
+                }).catch(() => cached);
+                return cached || fetchPromise;
+            })
+        );
+        return;
+    }
+
+    // остальное — cache-first
     e.respondWith(
         caches.match(e.request).then(cached => cached || fetch(e.request).then(response => {
             if (response.ok && e.request.url.startsWith('https://')) {
