@@ -1,4 +1,4 @@
-const CACHE = 'list-2026-10-30_20-51-13';
+const CACHE = 'list-2026-11-02_17-34-43';
 const ASSETS = [
     '/list/',
     '/list/index.html',
