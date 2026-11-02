@@ -515,11 +515,13 @@ function setupBottomInput(id, color) {
     input.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             e.preventDefault();
+            e.stopPropagation();
             if (!input.value.trim()) { input.blur(); return; }
             addItem(color, input.value.trim());
             input.value = '';
         } else if (e.key === 'Escape') {
             e.preventDefault();
+            e.stopPropagation();
             input.blur();
         }
     });
@@ -605,7 +607,7 @@ document.addEventListener('keydown', e => {
     if (e.defaultPrevented) return;
     if (e.repeat || e.isComposing) return;
     if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-    if (isEditingNow()) return;
+    if (e.target.closest && e.target.closest('.item-text, .new-item-input, #input-config')) return;
     const overlay = document.getElementById('modal-overlay');
     if (overlay && overlay.classList.contains('show')) return;
     e.preventDefault();
