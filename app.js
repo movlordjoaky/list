@@ -194,6 +194,29 @@ function renderTextWithLinks(text) {
 
 function renderAll() { render('green'); render('blue'); }
 
+function addItemTop(color) {
+    const items = lists[color].items;
+    const minOrder = items.length
+        ? Math.min(...items.map(i => i.order ?? 0))
+        : 10;
+    const newId = (window.crypto && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : Date.now().toString() + '_' + Math.random().toString(36).slice(2, 8);
+    items.push({ id: newId, text: '', done: false, order: minOrder - 10 });
+    render(color);
+    setTimeout(() => {
+        const el = document.querySelector(`[data-id="${newId}"] .item-text`);
+        if (!el) return;
+        el.focus();
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(true);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }, 0);
+}
+
 function addItem(color, text) {
     if (!text.trim()) return;
     lists[color].items.push({ id: Date.now().toString(), text: text.trim(), done: false, order: maxOrder(color) + 10 });
@@ -576,6 +599,17 @@ document.addEventListener('keydown', e => {
     }
 });
 
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (e.repeat || e.isComposing) return;
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    if (isEditingNow()) return;
+    const overlay = document.getElementById('modal-overlay');
+    if (overlay && overlay.classList.contains('show')) return;
+    e.preventDefault();
+    addItemTop(currentTab);
+});
+
 document.getElementById('sync-btn').addEventListener('click', () => {
     if (!getToken() || !getGistId()) { showModal(); return; }
     sync();
@@ -609,6 +643,14 @@ document.addEventListener('focusin', e => {
         history.pushState({ editing: true }, '');
         editingHistoryPushed = true;
     }
+});
+
+document.addEventListener('mousedown', e => {
+    if (e.target.closest('button, a')) e.preventDefault();
+});
+
+document.addEventListener('focusin', e => {
+    if (e.target.matches('button, a')) e.target.blur();
 });
 
 document.addEventListener('focusout', e => {
