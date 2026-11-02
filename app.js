@@ -131,6 +131,7 @@ function renderSection(containerId, sectionItems, color) {
             }
             if (e.key === 'Enter') {
                 e.preventDefault();
+                e.stopPropagation();
                 const t = textEl.textContent.trim();
                 if (!t) { deleteItem(color, item.id); return; }
                 if (t !== item.text) { item.text = t; }
@@ -601,6 +602,7 @@ document.addEventListener('keydown', e => {
 
 document.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
+    if (e.defaultPrevented) return;
     if (e.repeat || e.isComposing) return;
     if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
     if (isEditingNow()) return;
