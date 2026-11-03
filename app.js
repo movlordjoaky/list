@@ -134,9 +134,10 @@ function renderSection(containerId, sectionItems, color) {
                 e.stopPropagation();
                 const t = textEl.textContent.trim();
                 if (!t) { deleteItem(color, item.id); return; }
-                if (t !== item.text) { item.text = t; }
+                const changed = t !== item.text;
+                if (changed) { item.text = t; }
                 if (textEl.textContent !== t) textEl.textContent = t;
-                scheduleSave(color);
+                if (changed) scheduleSave(color);
                 const sectionItems = lists[color].items
                     .filter(i => i.done === item.done)
                     .sort((a, b) => a.order - b.order);
@@ -235,8 +236,12 @@ function toggleDone(color, id) {
 }
 
 function deleteItem(color, id) {
-    lists[color].items = lists[color].items.filter(i => i.id !== id);
-    scheduleSave(color);
+    const idx = lists[color].items.findIndex(i => i.id === id);
+    if (idx === -1) return;
+    const item = lists[color].items[idx];
+    const hadText = item.text.trim().length > 0;
+    lists[color].items.splice(idx, 1);
+    if (hadText) scheduleSave(color);
     render(color);
 }
 
